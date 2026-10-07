@@ -51,10 +51,12 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
 
     private var task: Task<Void, Never>?
     private var player: AVAudioPlayer?
+    private var rate: Double = 1
     private var finished: CheckedContinuation<Void, Never>?
 
     func play(_ items: [Item], from startID: Int, storyID: UUID, language: StoryLanguage, level: String, rate: Double, continuous: Bool) {
         stop()
+        self.rate = rate
         guard let start = items.firstIndex(where: { $0.id == startID }) else { return }
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio)
         try? AVAudioSession.sharedInstance().setActive(true)
@@ -80,7 +82,7 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
                     let data = try await SpeechCache.shared.audio(text: item.text, voice: voice, instructions: instructions)
                     isLoading = false
                     if Task.isCancelled { break }
-                    try await playAndWait(data, rate: rate)
+                    try await playAndWait(data)
                 } catch {
                     isLoading = false
                     if !Task.isCancelled { errorMessage = "朗读失败：\(error.localizedDescription)" }
@@ -107,7 +109,13 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
         isPlayingAll = false
     }
 
-    private func playAndWait(_ data: Data, rate: Double) async throws {
+    /// Applies to the sentence being read right now as well as the rest of the queue.
+    func setRate(_ rate: Double) {
+        self.rate = rate
+        player?.rate = Float(rate)
+    }
+
+    private func playAndWait(_ data: Data) async throws {
         let player = try AVAudioPlayer(data: data)
         player.delegate = self
         player.enableRate = true

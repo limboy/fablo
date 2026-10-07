@@ -168,12 +168,6 @@ struct ReaderView: View {
                 Toggle("显示罗马音", systemImage: "character.textbox", isOn: $showRomaji)
             }
             Toggle("显示全部翻译", systemImage: "translate", isOn: $showAllTranslations)
-            Picker("语速", systemImage: "gauge.with.dots.needle.33percent", selection: $speechRate) {
-                Text("0.75×").tag(0.75)
-                Text("1.0×").tag(1.0)
-                Text("1.25×").tag(1.25)
-            }
-            .pickerStyle(.menu)
         } label: {
             Image(systemName: "textformat")
         }
@@ -197,9 +191,10 @@ struct ReaderView: View {
             if isPlayingThisStory && player.isLoading {
                 ProgressView()
             }
+            rateMenu
         }
         .padding(.leading, 8)
-        .padding(.trailing, 18)
+        .padding(.trailing, 10)
         .padding(.vertical, 8)
         .glassEffect(.regular, in: .capsule)
         // The whole capsule is the control; otherwise taps fall through to the sentences underneath.
@@ -207,6 +202,32 @@ struct ReaderView: View {
         .onTapGesture(perform: togglePlayAll)
         .padding(.horizontal, 16)
         .padding(.bottom, 4)
+    }
+
+    private static let rates = [0.5, 0.75, 1.0, 1.25, 1.5]
+
+    private var rateMenu: some View {
+        Menu {
+            Picker("语速", selection: $speechRate) {
+                ForEach(Self.rates, id: \.self) { rate in
+                    Text(Self.rateLabel(rate)).tag(rate)
+                }
+            }
+        } label: {
+            Text(Self.rateLabel(speechRate))
+                .font(.subheadline.weight(.semibold).monospacedDigit())
+                .foregroundStyle(Theme.ink)
+                .frame(minWidth: 44)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 10)
+                .background(Theme.card, in: Capsule())
+        }
+        .accessibilityLabel("语速 \(Self.rateLabel(speechRate))")
+        .onChange(of: speechRate) { _, rate in player.setRate(rate) }
+    }
+
+    private static func rateLabel(_ rate: Double) -> String {
+        String(format: "%g×", rate)
     }
 
     private func togglePlayAll() {
@@ -229,7 +250,7 @@ struct ReaderView: View {
     private var statusSubtitle: String {
         if let error = player.errorMessage { return error }
         let count = content?.allSentences.count ?? 0
-        return "\(count) 句 · \(String(format: "%.2g", speechRate))× 语速"
+        return "\(count) 句"
     }
 }
 
