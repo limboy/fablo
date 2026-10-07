@@ -1,149 +1,122 @@
 import AVFoundation
-import CryptoKit
 import Foundation
 import Observation
 
-/// Fetches TTS audio once and keeps it on disk; concurrent requests for the same text share one download.
-actor SpeechCache {
-    static let shared = SpeechCache()
-
-    private let directory: URL = {
-        let dir = URL.cachesDirectory.appending(path: "tts", directoryHint: .isDirectory)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir
-    }()
-    private var inFlight: [String: Task<Data, Error>] = [:]
-
-    func audio(text: String, voice: String, instructions: String) async throws -> Data {
-        let key = SHA256.hash(data: Data("\(GatewayClient.Model.speech)|\(voice)|\(instructions)|\(text)".utf8))
-            .map { String(format: "%02x", $0) }.joined()
-        let file = directory.appending(path: "\(key).wav")
-        if let data = try? Data(contentsOf: file) { return data }
-        if let task = inFlight[key] { return try await task.value }
-
-        let task = Task {
-            try await GatewayClient.shared.speech(text: text, voice: voice, instructions: instructions)
-        }
-        inFlight[key] = task
-        defer { inFlight[key] = nil }
-        let data = try await task.value
-        try? data.write(to: file)
-        return data
-    }
-}
-
+/// Plays a story's narration and reports which sentence and word are being spoken.
 @MainActor
 @Observable
 final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
-    struct Item {
-        let id: Int
-        let text: String
-    }
-
-    /// Story + sentence currently being read, so views only react to their own playback.
+    /// Story + sentence/word currently being read, so views only react to their own playback.
     private(set) var storyID: UUID?
     private(set) var currentID: Int?
+    private(set) var currentWord: Int?
     private(set) var isLoading = false
     private(set) var isPlayingAll = false
     private(set) var errorMessage: String?
 
-    var isActive: Bool { currentID != nil }
-
-    private var task: Task<Void, Never>?
     private var player: AVAudioPlayer?
+    private var timeline: StoryAudioTimeline?
+    private var stopTime: Double?
     private var rate: Double = 1
-    private var finished: CheckedContinuation<Void, Never>?
+    private var loadTask: Task<Void, Never>?
+    private var tickTask: Task<Void, Never>?
 
-    func play(_ items: [Item], from startID: Int, storyID: UUID, language: StoryLanguage, level: String, rate: Double, continuous: Bool) {
+    /// Plays from `sentence`; reads to the end when `continuous`, otherwise just that sentence.
+    func play(_ source: StoryAudioSource, from sentence: Int, rate: Double, continuous: Bool) {
         stop()
         self.rate = rate
-        guard let start = items.firstIndex(where: { $0.id == startID }) else { return }
-        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio)
-        try? AVAudioSession.sharedInstance().setActive(true)
-
-        let queue = continuous ? Array(items[start...]) : [items[start]]
-        let instructions = Self.instructions(language: language, level: level)
-        let voice = language == .ja ? "Kore" : "Zephyr"
-        self.storyID = storyID
+        storyID = source.storyID
+        currentID = sentence
         isPlayingAll = continuous
+        isLoading = true
         errorMessage = nil
 
-        task = Task {
-            for (offset, item) in queue.enumerated() {
-                if Task.isCancelled { break }
-                currentID = item.id
-                // Prefetch the next sentence while this one plays.
-                if offset + 1 < queue.count {
-                    let next = queue[offset + 1].text
-                    Task { _ = try? await SpeechCache.shared.audio(text: next, voice: voice, instructions: instructions) }
-                }
-                do {
-                    isLoading = true
-                    let data = try await SpeechCache.shared.audio(text: item.text, voice: voice, instructions: instructions)
-                    isLoading = false
-                    if Task.isCancelled { break }
-                    try await playAndWait(data)
-                } catch {
-                    isLoading = false
-                    if !Task.isCancelled { errorMessage = "朗读失败：\(error.localizedDescription)" }
-                    break
-                }
+        loadTask = Task {
+            do {
+                let (url, timeline) = try await StoryAudioStore.shared.audio(for: source)
+                guard !Task.isCancelled else { return }
+                try start(url: url, timeline: timeline, sentence: sentence, continuous: continuous)
+            } catch {
+                guard !Task.isCancelled else { return }
+                reset()
+                errorMessage = "朗读失败：\(error.localizedDescription)"
             }
-            if !Task.isCancelled { reset() }
         }
     }
 
     func stop() {
-        task?.cancel()
-        task = nil
+        loadTask?.cancel()
         player?.stop()
-        resumeFinished()
         reset()
     }
 
-    private func reset() {
-        player = nil
-        currentID = nil
-        storyID = nil
-        isLoading = false
-        isPlayingAll = false
-    }
-
-    /// Applies to the sentence being read right now as well as the rest of the queue.
+    /// Applies to what is being read right now.
     func setRate(_ rate: Double) {
         self.rate = rate
         player?.rate = Float(rate)
     }
 
-    private func playAndWait(_ data: Data) async throws {
-        let player = try AVAudioPlayer(data: data)
+    private func start(url: URL, timeline: StoryAudioTimeline, sentence: Int, continuous: Bool) throws {
+        try AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio)
+        try AVAudioSession.sharedInstance().setActive(true)
+
+        let player = try AVAudioPlayer(contentsOf: url)
         player.delegate = self
         player.enableRate = true
         player.rate = Float(rate)
+        // Start a hair early so the first syllable isn't clipped.
+        let begin = timeline.sentenceStarts.indices.contains(sentence) ? timeline.sentenceStarts[sentence] : 0
+        player.currentTime = max(0, begin - 0.15)
         self.player = player
-        await withCheckedContinuation { continuation in
-            finished = continuation
-            player.play()
+        self.timeline = timeline
+        stopTime = continuous ? nil : timeline.sentenceEnd(sentence)
+        isLoading = false
+        player.play()
+
+        tickTask = Task { [weak self] in
+            while !Task.isCancelled {
+                self?.tick()
+                try? await Task.sleep(for: .milliseconds(40))
+            }
         }
     }
 
-    private func resumeFinished() {
-        finished?.resume()
-        finished = nil
+    private func tick() {
+        guard let player, let timeline else { return }
+        let time = player.currentTime
+        if let stopTime, time >= stopTime - 0.05 {
+            stop()
+            return
+        }
+        let sentence = timeline.sentence(at: time)
+        if currentID != sentence { currentID = sentence }
+        let word = timeline.word(at: time, in: sentence)
+        if currentWord != word { currentWord = word }
+    }
+
+    private func reset() {
+        loadTask = nil
+        tickTask?.cancel()
+        tickTask = nil
+        player = nil
+        timeline = nil
+        stopTime = nil
+        storyID = nil
+        currentID = nil
+        currentWord = nil
+        isLoading = false
+        isPlayingAll = false
     }
 
     nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-        Task { @MainActor in self.resumeFinished() }
+        Task { @MainActor in
+            if self.player === player { self.stop() }
+        }
     }
 
     nonisolated func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
-        Task { @MainActor in self.resumeFinished() }
-    }
-
-    private static func instructions(language: StoryLanguage, level: String) -> String {
-        let beginner = ["A1", "A2", "N5", "N4"].contains(level)
-        let pace = beginner ? "slowly and very clearly" : "at a natural, relaxed pace"
-        let accent = language == .ja ? "in standard Tokyo Japanese" : "in clear standard English"
-        return "Read this aloud \(accent), \(pace), like an audiobook narrator for language learners."
+        Task { @MainActor in
+            if self.player === player { self.stop() }
+        }
     }
 }

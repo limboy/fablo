@@ -22,6 +22,9 @@ struct GatewayClient: Sendable {
         static let text = "google/gemini-3.8-flash"
         static let image = "openai/gpt-image-2.5-sunburst"
         static let speech = "google/gemini-3.8-flash-tts"
+        /// Gemini 3.5 Transcribe returns no timestamps; MAI-Transcribe 2 gives per-word
+        /// (English) or per-character (Japanese) timings.
+        static let transcription = "microsoft/mai-transcribe-2"
     }
 
     private let base = URL(string: "https://ai-gateway.vercel.sh")!
@@ -128,6 +131,43 @@ struct GatewayClient: Sendable {
         let response = try JSONDecoder().decode(Response.self, from: data)
         guard let audio = Data(base64Encoded: response.audio) else { throw GatewayError.emptyResponse }
         return audio
+    }
+
+    // MARK: Transcription with word timings
+
+    struct TimedWord: Decodable {
+        let text: String
+        let offsetMilliseconds: Double
+        let durationMilliseconds: Double
+    }
+
+    func transcribeWords(wav: Data) async throws -> [TimedWord] {
+        let body: [String: Any] = [
+            "audio": wav.base64EncodedString(),
+            "mediaType": "audio/wav",
+            "providerOptions": ["azure": ["timestamps": "word", "transcribeStyle": "verbatim"]],
+        ]
+        let headers = [
+            "ai-gateway-protocol-version": "0.0.1",
+            "ai-transcription-model-specification-version": "4",
+            "ai-model-id": Model.transcription,
+        ]
+        let data = try await post("/v4/ai/transcription-model", body: body, headers: headers)
+
+        struct Response: Decodable {
+            struct Metadata: Decodable {
+                struct Azure: Decodable {
+                    struct Phrase: Decodable { let words: [TimedWord]? }
+                    let phrases: [Phrase]?
+                }
+                let azure: Azure?
+            }
+            let providerMetadata: Metadata?
+        }
+        let response = try JSONDecoder().decode(Response.self, from: data)
+        let words = response.providerMetadata?.azure?.phrases?.flatMap { $0.words ?? [] } ?? []
+        guard !words.isEmpty else { throw GatewayError.emptyResponse }
+        return words
     }
 
     // MARK: Transport

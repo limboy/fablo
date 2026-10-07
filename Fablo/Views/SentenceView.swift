@@ -96,6 +96,8 @@ struct SentenceFlow: View {
     let language: StoryLanguage
     let options: ReadingOptions
     let annotated: Bool
+    /// Index (in display order) of the word being spoken, if any.
+    var activeWord: Int? = nil
     var onWordTap: ((Word) -> Void)?
 
     private struct Cell: Identifiable {
@@ -132,6 +134,7 @@ struct SentenceFlow: View {
                     options: options,
                     chunkColor: annotated ? Theme.chunk(cell.role) : nil,
                     underline: annotated ? Theme.pos(cell.word.pos) : nil,
+                    isActive: cell.id == activeWord,
                     roundLeading: cell.isChunkStart,
                     roundTrailing: cell.isChunkEnd
                 )
@@ -194,6 +197,7 @@ struct WordCell: View {
     let options: ReadingOptions
     let chunkColor: Color?
     let underline: Color?
+    var isActive = false
     let roundLeading: Bool
     let roundTrailing: Bool
 
@@ -213,7 +217,7 @@ struct WordCell: View {
             }
             Text(word.surface)
                 .font(isJapanese ? .system(size: 20, weight: .bold) : .system(size: 18, weight: .medium, design: .serif))
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(isActive ? Theme.accent : Theme.ink)
                 .fixedSize()
                 .background(alignment: .bottom) {
                     if let underline {
@@ -257,6 +261,7 @@ struct SentenceView: View {
     let options: ReadingOptions
     let isSelected: Bool
     let isSpeaking: Bool
+    var speakingWord: Int? = nil
     let showTranslation: Bool
     let onSelect: () -> Void
     let onPlay: () -> Void
@@ -271,6 +276,7 @@ struct SentenceView: View {
                 language: language,
                 options: options,
                 annotated: isSelected,
+                activeWord: speakingWord,
                 onWordTap: isSelected ? { tappedWord = WordBox(word: $0) } : nil
             )
 

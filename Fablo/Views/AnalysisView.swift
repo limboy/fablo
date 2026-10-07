@@ -56,7 +56,8 @@ struct AnalysisView: View {
                 sentence: ref.sentence,
                 language: story.language,
                 options: ReadingOptions(),
-                annotated: true
+                annotated: true,
+                activeWord: isSpeaking ? player.currentWord : nil
             )
             Text(ref.sentence.zh)
                 .font(.system(size: 16))
@@ -65,9 +66,8 @@ struct AnalysisView: View {
                 if isSpeaking {
                     player.stop()
                 } else {
-                    let items = content.allSentences.map { SpeechPlayer.Item(id: $0.id, text: $0.sentence.text) }
-                    player.play(items, from: ref.id, storyID: story.id, language: story.language,
-                                level: story.level, rate: speechRate, continuous: false)
+                    player.play(StoryAudioSource(story: story, content: content), from: ref.id,
+                                rate: speechRate, continuous: false)
                 }
             } label: {
                 Label(isSpeaking ? "停止" : "朗读", systemImage: isSpeaking ? "stop.fill" : "speaker.wave.2.fill")

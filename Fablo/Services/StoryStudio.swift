@@ -43,6 +43,7 @@ final class StoryStudio {
                 try? context.save()
                 jobs.removeAll { $0.id == jobID }
                 generateCover(for: story, in: context)
+                StoryAudioStore.shared.prepare(StoryAudioSource(story: story, content: content))
             } catch {
                 if let index = jobs.firstIndex(where: { $0.id == jobID }) {
                     jobs[index].error = error.localizedDescription

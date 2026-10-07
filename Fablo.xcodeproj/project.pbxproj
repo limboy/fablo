@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		117D38F7B0AC736A1D0E2BF1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7CA770758DF9B935EFD3AE14 /* Assets.xcassets */; };
 		1E4A371B6B6A218FF863482B /* AnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EEDABEF9FC1B8B634D2B8EB /* AnalysisView.swift */; };
+		355609DEF46E671B2F069AE8 /* StoryAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B899E85E1FA70DB5973A5E1D /* StoryAudio.swift */; };
 		47DA18F4E700AD9F4578B936 /* Story.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89D470B222619FB890E3DD76 /* Story.swift */; };
 		52B7720FCDA4D79951AECA62 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A46D44646F63CC07E89E966 /* Theme.swift */; };
 		5EEAAE7ECF3DCDDC03D980B5 /* GatewayClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAFEC38F8939510190C112D7 /* GatewayClient.swift */; };
@@ -35,6 +36,7 @@
 		89D470B222619FB890E3DD76 /* Story.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Story.swift; sourceTree = "<group>"; };
 		8D418D5862196FEA8CE0790A /* Secrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Secrets.swift; sourceTree = "<group>"; };
 		A1C8DB01715084EEE5A7E7B4 /* FabloApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FabloApp.swift; sourceTree = "<group>"; };
+		B899E85E1FA70DB5973A5E1D /* StoryAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryAudio.swift; sourceTree = "<group>"; };
 		BAFEC38F8939510190C112D7 /* GatewayClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayClient.swift; sourceTree = "<group>"; };
 		E4B617DFD42B0127EF4A880E /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
 		E5E6027822DCEDB2E022C7F8 /* NewStoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewStoryView.swift; sourceTree = "<group>"; };
@@ -95,6 +97,7 @@
 				BAFEC38F8939510190C112D7 /* GatewayClient.swift */,
 				8D418D5862196FEA8CE0790A /* Secrets.swift */,
 				F6C2742B42A411A17C63C138 /* SpeechPlayer.swift */,
+				B899E85E1FA70DB5973A5E1D /* StoryAudio.swift */,
 				F4E8394212C5275F8D763DB0 /* StoryGenerator.swift */,
 				51F28837549B54ECBD9997CA /* StoryStudio.swift */,
 			);
@@ -203,6 +206,7 @@
 				E7FF366F32C285A0EC8DFD31 /* SentenceView.swift in Sources */,
 				D06F0C75D0CE5C88852F2537 /* SpeechPlayer.swift in Sources */,
 				47DA18F4E700AD9F4578B936 /* Story.swift in Sources */,
+				355609DEF46E671B2F069AE8 /* StoryAudio.swift in Sources */,
 				A683595DD73F14CB9E298E2D /* StoryContent.swift in Sources */,
 				6C29F2A07FCB3992DA8BAA4C /* StoryGenerator.swift in Sources */,
 				CB178DEEE8115AC40BCAD949 /* StoryStudio.swift in Sources */,

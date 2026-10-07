@@ -33,7 +33,7 @@ struct ReaderView: View {
                     let all = content.allSentences
                     let paragraphEnds = Set(content.numberedParagraphs.compactMap { $0.last?.id })
                     ForEach(all) { ref in
-                        sentenceView(ref, all: all)
+                        sentenceView(ref)
                             .padding(.bottom, sentenceSpacing(after: ref.id, paragraphEnds: paragraphEnds))
                     }
                 } else {
@@ -65,6 +65,8 @@ struct ReaderView: View {
         }
         .task {
             if content == nil { content = story.decodedContent() }
+            // Narration takes a while to generate; start now so play is instant later.
+            if let content { StoryAudioStore.shared.prepare(StoryAudioSource(story: story, content: content)) }
         }
         .onDisappear {
             if isPlayingThisStory { player.stop() }
@@ -117,13 +119,14 @@ struct ReaderView: View {
 
     // MARK: Sentences
 
-    private func sentenceView(_ ref: SentenceRef, all: [SentenceRef]) -> some View {
+    private func sentenceView(_ ref: SentenceRef) -> some View {
         SentenceView(
             ref: ref,
             language: story.language,
             options: options,
             isSelected: selectedID == ref.id,
             isSpeaking: speakingID == ref.id,
+            speakingWord: speakingID == ref.id ? player.currentWord : nil,
             showTranslation: showAllTranslations,
             onSelect: {
                 withAnimation(.snappy(duration: 0.25)) {
@@ -134,7 +137,7 @@ struct ReaderView: View {
                 if speakingID == ref.id {
                     player.stop()
                 } else {
-                    play(from: ref.id, all: all, continuous: false)
+                    play(from: ref.id, continuous: false)
                 }
             },
             onAnalyze: { analysisTarget = ref }
@@ -147,16 +150,9 @@ struct ReaderView: View {
         return isJapanese ? 32 : 20
     }
 
-    private func play(from id: Int, all: [SentenceRef], continuous: Bool) {
-        player.play(
-            all.map { SpeechPlayer.Item(id: $0.id, text: $0.sentence.text) },
-            from: id,
-            storyID: story.id,
-            language: story.language,
-            level: story.level,
-            rate: speechRate,
-            continuous: continuous
-        )
+    private func play(from id: Int, continuous: Bool) {
+        guard let content else { return }
+        player.play(StoryAudioSource(story: story, content: content), from: id, rate: speechRate, continuous: continuous)
     }
 
     // MARK: Chrome
@@ -235,15 +231,14 @@ struct ReaderView: View {
     private func togglePlayAll() {
         if isPlayingThisStory && player.isPlayingAll {
             player.stop()
-        } else if let content {
-            let all = content.allSentences
-            play(from: selectedID ?? all.first?.id ?? 0, all: all, continuous: true)
+        } else {
+            play(from: selectedID ?? 0, continuous: true)
         }
     }
 
     private var statusTitle: String {
         if isPlayingThisStory, let id = player.currentID {
-            return player.isLoading ? "正在生成第 \(id + 1) 句语音…" : "正在朗读第 \(id + 1) 句"
+            return player.isLoading ? "正在准备朗读音频…" : "正在朗读第 \(id + 1) 句"
         }
         if let selectedID { return "从第 \(selectedID + 1) 句开始朗读" }
         return "朗读全文"

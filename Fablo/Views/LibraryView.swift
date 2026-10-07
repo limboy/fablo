@@ -41,6 +41,8 @@ struct LibraryView: View {
                                 studio.generateCover(for: story, in: modelContext)
                             }
                             Button("删除", systemImage: "trash", role: .destructive) {
+                                let id = story.id
+                                Task { await StoryAudioStore.shared.remove(id) }
                                 modelContext.delete(story)
                                 try? modelContext.save()
                             }
