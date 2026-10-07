@@ -37,7 +37,7 @@ final class StoryStudio {
         guard let job = jobs.first(where: { $0.id == jobID }) else { return }
         Task {
             do {
-                let content = try await StoryGenerator.generate(job.request)
+                let content = try await StoryGenerator.generate(job.request, avoiding: existingStories(in: context))
                 let story = try Story(content: content, request: job.request)
                 context.insert(story)
                 try? context.save()
@@ -49,6 +49,12 @@ final class StoryStudio {
                 }
             }
         }
+    }
+
+    /// Titles and summaries are stored with each story, so this reads them locally — no extra AI call.
+    private func existingStories(in context: ModelContext) -> [String] {
+        let stories = (try? context.fetch(FetchDescriptor<Story>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)]))) ?? []
+        return stories.map { "\($0.title)（\($0.titleZh)）：\($0.summaryZh)" }
     }
 
     func generateCover(for story: Story, in context: ModelContext) {

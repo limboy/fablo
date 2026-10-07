@@ -4,15 +4,26 @@ import Foundation
 enum StoryGenerator {
     // MARK: Story
 
-    static func generate(_ request: StoryRequest) async throws -> StoryContent {
+    /// - Parameter existing: one line per story already in the library (title + Chinese summary),
+    ///   so the model can steer away from themes the learner has already read.
+    static func generate(_ request: StoryRequest, avoiding existing: [String]) async throws -> StoryContent {
         let topic = request.topic.trimmingCharacters(in: .whitespacesAndNewlines)
-        let user = """
+        var user = """
         目标语言：\(request.language.chineseName)
         难度：\(request.level.name)（\(request.level.summary)）
         类型：\(request.genre.rawValue)
         篇幅：约 \(request.length.sentenceCount) 句
         主题：\(topic.isEmpty ? "自由发挥，选一个新鲜有趣的切入点" : topic)
         """
+        if !existing.isEmpty {
+            user += """
+
+
+            学习者已经读过下面这些短文。请避开相同或相似的题材、主角、情节和场景，写一篇明显不同的新故事\
+            （如果指定了主题，就在该主题下换一个新的角度）：
+            \(existing.map { "- \($0)" }.joined(separator: "\n"))
+            """
+        }
         let content = try await GatewayClient.shared.structured(
             StoryContent.self,
             system: storySystemPrompt,
