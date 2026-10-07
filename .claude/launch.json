@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "remotion-studio", "runtimeExecutable": "sh", "runtimeArgs": ["-c", "cd marketing-video && npx remotion studio --port 3000 --no-open"], "port": 3000 }
+  ]
+}
