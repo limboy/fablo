@@ -4,7 +4,7 @@ import Foundation
 /// When each sentence and word starts in a story's narration.
 struct StoryAudioTimeline: Codable {
     /// Bump when voice, instructions or alignment change so old audio is regenerated.
-    static let currentVersion = 2
+    static let currentVersion = 3
 
     var version: Int
     var duration: Double
@@ -12,11 +12,26 @@ struct StoryAudioTimeline: Codable {
     /// nil for words that aren't spoken (punctuation).
     var wordStarts: [[Double?]]
     var sentenceStarts: [Double]
+    /// When the last spoken sound of each sentence ends (before the pause that follows).
+    var sentenceEnds: [Double]
     /// False when transcription failed and timings were estimated from text length.
     var isAligned: Bool
 
-    func sentenceEnd(_ sentence: Int) -> Double {
-        sentence + 1 < sentenceStarts.count ? sentenceStarts[sentence + 1] : duration
+    /// Where to start a single sentence: inside the pause before it, so nothing of the
+    /// previous sentence is heard and the first syllable isn't clipped.
+    func clipStart(_ sentence: Int) -> Double {
+        guard sentenceStarts.indices.contains(sentence) else { return 0 }
+        let start = sentenceStarts[sentence]
+        let previousEnd = sentence > 0 ? sentenceEnds[sentence - 1] : 0
+        return max(previousEnd, start - min(0.15, (start - previousEnd) / 2))
+    }
+
+    /// Where to stop a single sentence: inside the pause after it, before the next one begins.
+    func clipEnd(_ sentence: Int) -> Double {
+        guard sentenceEnds.indices.contains(sentence) else { return duration }
+        let end = sentenceEnds[sentence]
+        let nextStart = sentence + 1 < sentenceStarts.count ? sentenceStarts[sentence + 1] : duration
+        return min(nextStart, end + min(0.25, max(nextStart - end, 0) / 2))
     }
 
     func sentence(at time: Double) -> Int {
@@ -204,23 +219,30 @@ enum TimelineAligner {
 
         // Transcript side: characters with times spread across each recognized word.
         var hyp: [Character] = []
-        var hypTime: [Double] = []
+        var hypStart: [Double] = []
+        var hypEnd: [Double] = []
         for word in words {
             let chars = word.text.compactMap(comparable)
+            let step = word.durationMilliseconds / Double(max(chars.count, 1))
             for (k, c) in chars.enumerated() {
                 hyp.append(c)
-                hypTime.append((word.offsetMilliseconds + word.durationMilliseconds * Double(k) / Double(chars.count)) / 1000)
+                hypStart.append((word.offsetMilliseconds + step * Double(k)) / 1000)
+                hypEnd.append((word.offsetMilliseconds + step * Double(k + 1)) / 1000)
             }
         }
         guard !ref.isEmpty, !hyp.isEmpty else { return estimate(sentences, duration: duration) }
 
-        let times = alignedTimes(ref: ref, hyp: hyp, hypTime: hypTime, end: duration)
+        let (starts, ends) = alignedTimes(ref: ref, hyp: hyp, hypStart: hypStart, hypEnd: hypEnd, end: duration)
 
         var wordStarts = sentences.map { [Double?](repeating: nil, count: $0.count) }
-        for (index, owner) in refWord.enumerated() where wordStarts[owner.sentence][owner.word] == nil {
-            wordStarts[owner.sentence][owner.word] = times[index]
+        var sentenceEnds = [Double](repeating: 0, count: sentences.count)
+        for (index, owner) in refWord.enumerated() {
+            if wordStarts[owner.sentence][owner.word] == nil {
+                wordStarts[owner.sentence][owner.word] = starts[index]
+            }
+            sentenceEnds[owner.sentence] = max(sentenceEnds[owner.sentence], ends[index])
         }
-        return timeline(wordStarts: wordStarts, duration: duration, isAligned: true)
+        return timeline(wordStarts: wordStarts, sentenceEnds: sentenceEnds, duration: duration, isAligned: true)
     }
 
     /// Fallback without a transcription: spread time by character count.
@@ -236,25 +258,35 @@ enum TimelineAligner {
                 return duration * elapsed / total
             }
         }
-        return timeline(wordStarts: wordStarts, duration: duration, isAligned: false)
+        return timeline(wordStarts: wordStarts, sentenceEnds: nil, duration: duration, isAligned: false)
     }
 
-    private static func timeline(wordStarts: [[Double?]], duration: Double, isAligned: Bool) -> StoryAudioTimeline {
+    /// Without measured ends (estimated timings), a sentence is taken to run until the next one starts.
+    private static func timeline(wordStarts: [[Double?]], sentenceEnds: [Double]?, duration: Double, isAligned: Bool) -> StoryAudioTimeline {
         var sentenceStarts: [Double] = []
         for words in wordStarts {
             let start = words.compactMap { $0 }.min() ?? sentenceStarts.last ?? 0
             sentenceStarts.append(max(start, sentenceStarts.last ?? 0))
+        }
+        let ends = sentenceStarts.indices.map { index in
+            let nextStart = index + 1 < sentenceStarts.count ? sentenceStarts[index + 1] : duration
+            guard let measured = sentenceEnds?[index], measured > sentenceStarts[index] else { return nextStart }
+            return min(measured, nextStart)
         }
         return StoryAudioTimeline(
             version: StoryAudioTimeline.currentVersion,
             duration: duration,
             wordStarts: wordStarts,
             sentenceStarts: sentenceStarts,
+            sentenceEnds: ends,
             isAligned: isAligned
         )
     }
 
-    private static func alignedTimes(ref: [Character], hyp: [Character], hypTime: [Double], end: Double) -> [Double] {
+    /// Start and end time for each of our characters.
+    private static func alignedTimes(
+        ref: [Character], hyp: [Character], hypStart: [Double], hypEnd: [Double], end: Double
+    ) -> (starts: [Double], ends: [Double]) {
         var removed = Set<Int>()
         var inserted = Set<Int>()
         for change in hyp.difference(from: ref) {
@@ -275,33 +307,37 @@ enum TimelineAligner {
             j += 1
         }
 
-        var times = [Double](repeating: 0, count: ref.count)
-        var previous: (ref: Int, hyp: Int, time: Double)? = nil
+        var starts = [Double](repeating: 0, count: ref.count)
+        var ends = [Double](repeating: 0, count: ref.count)
+        var previous: (ref: Int, hyp: Int, end: Double)? = nil
         let sentinel = (ref: ref.count, hyp: hyp.count)
         for anchor in anchors + [sentinel] {
-            let anchorTime = anchor.ref < ref.count ? hypTime[anchor.hyp] : end
+            let anchorTime = anchor.ref < ref.count ? hypStart[anchor.hyp] : end
             let refGap = ((previous?.ref ?? -1) + 1)..<anchor.ref
             let hypGap = ((previous?.hyp ?? -1) + 1)..<anchor.hyp
-            if !refGap.isEmpty {
-                for (k, r) in refGap.enumerated() {
-                    if !hypGap.isEmpty {
-                        // Replaced stretch (e.g. キツネ ↔ 狐, きのう ↔ 昨日): spread our characters evenly
-                        // over the time the narrator spent there — our kana track speech better than kanji.
-                        let from = hypTime[hypGap.lowerBound]
-                        times[r] = from + (anchorTime - from) * Double(k) / Double(refGap.count)
-                    } else {
-                        // Nothing recognized here: interpolate between the neighbours.
-                        let from = previous?.time ?? 0
-                        times[r] = from + (anchorTime - from) * Double(k + 1) / Double(refGap.count + 1)
-                    }
+            for (k, r) in refGap.enumerated() {
+                let count = Double(refGap.count)
+                if !hypGap.isEmpty {
+                    // Replaced stretch (e.g. キツネ ↔ 狐, きのう ↔ 昨日): spread our characters evenly
+                    // over the time the narrator spent there — our kana track speech better than kanji.
+                    let from = hypStart[hypGap.lowerBound]
+                    let to = hypEnd[hypGap.upperBound - 1]
+                    starts[r] = from + (to - from) * Double(k) / count
+                    ends[r] = from + (to - from) * Double(k + 1) / count
+                } else {
+                    // Nothing recognized here: squeeze it in after the previous sound.
+                    let from = previous?.end ?? 0
+                    starts[r] = from + (anchorTime - from) * Double(k) / (count + 1)
+                    ends[r] = starts[r]
                 }
             }
             if anchor.ref < ref.count {
-                times[anchor.ref] = anchorTime
-                previous = (anchor.ref, anchor.hyp, anchorTime)
+                starts[anchor.ref] = anchorTime
+                ends[anchor.ref] = hypEnd[anchor.hyp]
+                previous = (anchor.ref, anchor.hyp, hypEnd[anchor.hyp])
             }
         }
-        return times
+        return (starts, ends)
     }
 
     /// Letters and digits only, width/case-folded, katakana folded to hiragana.

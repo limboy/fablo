@@ -12,11 +12,13 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
     private(set) var currentWord: Int?
     private(set) var isLoading = false
     private(set) var isPlayingAll = false
+    private(set) var isPaused = false
     private(set) var errorMessage: String?
 
     private var player: AVAudioPlayer?
     private var timeline: StoryAudioTimeline?
     private var stopTime: Double?
+    private var startSentence = 0
     private var rate: Double = 1
     private var loadTask: Task<Void, Never>?
     private var tickTask: Task<Void, Never>?
@@ -50,6 +52,20 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
         reset()
     }
 
+    func pause() {
+        // Nothing to hold on to yet while the narration is still being prepared.
+        guard let player, !isLoading else { return stop() }
+        player.pause()
+        isPaused = true
+    }
+
+    func resume() {
+        guard let player else { return }
+        player.rate = Float(rate)
+        player.play()
+        isPaused = false
+    }
+
     /// Applies to what is being read right now.
     func setRate(_ rate: Double) {
         self.rate = rate
@@ -64,12 +80,11 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
         player.delegate = self
         player.enableRate = true
         player.rate = Float(rate)
-        // Start a hair early so the first syllable isn't clipped.
-        let begin = timeline.sentenceStarts.indices.contains(sentence) ? timeline.sentenceStarts[sentence] : 0
-        player.currentTime = max(0, begin - 0.15)
+        player.currentTime = timeline.clipStart(sentence)
         self.player = player
         self.timeline = timeline
-        stopTime = continuous ? nil : timeline.sentenceEnd(sentence)
+        stopTime = continuous ? nil : timeline.clipEnd(sentence)
+        startSentence = sentence
         isLoading = false
         player.play()
 
@@ -84,11 +99,13 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
     private func tick() {
         guard let player, let timeline else { return }
         let time = player.currentTime
-        if let stopTime, time >= stopTime - 0.05 {
+        // Ticks are ~40ms apart; stop on the tick that would otherwise overshoot.
+        if let stopTime, time + 0.04 * rate >= stopTime {
             stop()
             return
         }
-        let sentence = timeline.sentence(at: time)
+        // Playback starts slightly before the sentence; don't report the previous one meanwhile.
+        let sentence = max(timeline.sentence(at: time), startSentence)
         if currentID != sentence { currentID = sentence }
         let word = timeline.word(at: time, in: sentence)
         if currentWord != word { currentWord = word }
@@ -106,6 +123,7 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
         currentWord = nil
         isLoading = false
         isPlayingAll = false
+        isPaused = false
     }
 
     nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {

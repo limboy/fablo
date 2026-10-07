@@ -46,7 +46,8 @@ struct ReaderView: View {
         }
         .scrollPosition($scrollPosition, anchor: .center)
         .onChange(of: speakingID) { _, id in
-            guard let id else { return }
+            // Only follow playback when it moves on; the sentence the reader just tapped is already in view.
+            guard let id, id != selectedID else { return }
             withAnimation(.snappy) {
                 selectedID = id
                 scrollPosition.scrollTo(id: id, anchor: .center)
@@ -176,7 +177,7 @@ struct ReaderView: View {
     private var playbackBar: some View {
         HStack(spacing: 12) {
             Button(action: togglePlayAll) {
-                Image(systemName: isPlayingThisStory && player.isPlayingAll ? "stop.fill" : "play.fill")
+                Image(systemName: isPlayingThisStory && player.isPlayingAll && !player.isPaused ? "pause.fill" : "play.fill")
                     .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(width: Self.barControlHeight, height: Self.barControlHeight)
@@ -230,7 +231,7 @@ struct ReaderView: View {
 
     private func togglePlayAll() {
         if isPlayingThisStory && player.isPlayingAll {
-            player.stop()
+            player.isPaused ? player.resume() : player.pause()
         } else {
             play(from: selectedID ?? 0, continuous: true)
         }
@@ -238,7 +239,8 @@ struct ReaderView: View {
 
     private var statusTitle: String {
         if isPlayingThisStory, let id = player.currentID {
-            return player.isLoading ? "正在准备朗读音频…" : "正在朗读第 \(id + 1) 句"
+            if player.isLoading { return "正在准备朗读音频…" }
+            return player.isPaused ? "已暂停 · 第 \(id + 1) 句" : "正在朗读第 \(id + 1) 句"
         }
         if let selectedID { return "从第 \(selectedID + 1) 句开始朗读" }
         return "朗读全文"
