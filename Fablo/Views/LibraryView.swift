@@ -56,6 +56,7 @@ struct LibraryView: View {
             }
             .background(Theme.paper.ignoresSafeArea())
             .navigationTitle("Fablo")
+            .toolbarTitleDisplayMode(.inlineLarge)
             .navigationDestination(for: Story.self) { story in
                 ReaderView(story: story)
             }
