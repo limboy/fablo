@@ -173,15 +173,20 @@ struct ReaderView: View {
         }
     }
 
+    /// Controls in the bar share one height and sit `barInset` from every edge of the capsule.
+    private static let barControlHeight: CGFloat = 40
+    private static let barInset: CGFloat = 6
+
     private var playbackBar: some View {
         HStack(spacing: 12) {
             Button(action: togglePlayAll) {
                 Image(systemName: isPlayingThisStory && player.isPlayingAll ? "stop.fill" : "play.fill")
-                    .font(.title3)
-                    .frame(width: 44, height: 44)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: Self.barControlHeight, height: Self.barControlHeight)
+                    .background(Theme.accent, in: Circle())
             }
-            .buttonStyle(.glassProminent)
-            .buttonBorderShape(.circle)
+            .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(statusTitle).font(.subheadline.weight(.semibold))
@@ -193,9 +198,7 @@ struct ReaderView: View {
             }
             rateMenu
         }
-        .padding(.leading, 8)
-        .padding(.trailing, 10)
-        .padding(.vertical, 8)
+        .padding(Self.barInset)
         .glassEffect(.regular, in: .capsule)
         // The whole capsule is the control; otherwise taps fall through to the sentences underneath.
         .contentShape(.capsule)
@@ -217,9 +220,8 @@ struct ReaderView: View {
             Text(Self.rateLabel(speechRate))
                 .font(.subheadline.weight(.semibold).monospacedDigit())
                 .foregroundStyle(Theme.ink)
-                .frame(minWidth: 44)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 14)
+                .frame(minWidth: 56, minHeight: Self.barControlHeight)
                 .background(Theme.card, in: Capsule())
         }
         .accessibilityLabel("语速 \(Self.rateLabel(speechRate))")
