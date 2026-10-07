@@ -14,17 +14,34 @@ struct FlowLayout: Layout {
     private func lines(for subviews: Subviews, maxWidth: CGFloat) -> ([Line], [CGSize], [CGFloat]) {
         let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
         var offsets = Array(repeating: CGFloat.zero, count: subviews.count)
+
+        // Items marked `flowKeepWithPrevious` wrap together with the item before them.
+        var groups: [[Int]] = []
+        for index in subviews.indices {
+            if index > 0, subviews[index][FlowKeepWithPrevious.self] {
+                groups[groups.count - 1].append(index)
+            } else {
+                groups.append([index])
+            }
+        }
+
         var lines: [Line] = [Line()]
-        for (index, subview) in subviews.enumerated() {
-            let gap = lines[lines.count - 1].indices.isEmpty ? 0 : subview[FlowGap.self]
-            if !lines[lines.count - 1].indices.isEmpty, lines[lines.count - 1].width + gap + sizes[index].width > maxWidth {
+        for group in groups {
+            let groupWidth = group.dropFirst().reduce(sizes[group[0]].width) {
+                $0 + subviews[$1][FlowGap.self] + sizes[$1].width
+            }
+            let leadingGap = lines[lines.count - 1].indices.isEmpty ? 0 : subviews[group[0]][FlowGap.self]
+            if !lines[lines.count - 1].indices.isEmpty, lines[lines.count - 1].width + leadingGap + groupWidth > maxWidth {
                 lines.append(Line())
             }
-            let actualGap = lines[lines.count - 1].indices.isEmpty ? 0 : gap
-            offsets[index] = lines[lines.count - 1].width + actualGap
-            lines[lines.count - 1].indices.append(index)
-            lines[lines.count - 1].width += actualGap + sizes[index].width
-            lines[lines.count - 1].height = max(lines[lines.count - 1].height, sizes[index].height)
+            for index in group {
+                let isLineStart = lines[lines.count - 1].indices.isEmpty
+                let gap = isLineStart ? 0 : subviews[index][FlowGap.self]
+                offsets[index] = lines[lines.count - 1].width + gap
+                lines[lines.count - 1].indices.append(index)
+                lines[lines.count - 1].width += gap + sizes[index].width
+                lines[lines.count - 1].height = max(lines[lines.count - 1].height, sizes[index].height)
+            }
         }
         return (lines, sizes, offsets)
     }
@@ -56,8 +73,15 @@ private struct FlowGap: LayoutValueKey {
     static let defaultValue: CGFloat = 0
 }
 
+private struct FlowKeepWithPrevious: LayoutValueKey {
+    static let defaultValue = false
+}
+
 extension View {
     func flowGap(_ gap: CGFloat) -> some View { layoutValue(key: FlowGap.self, value: gap) }
+
+    /// Never break the line between this item and the one before it (e.g. 「。」 after a word).
+    func flowKeepWithPrevious(_ keep: Bool = true) -> some View { layoutValue(key: FlowKeepWithPrevious.self, value: keep) }
 }
 
 struct ReadingOptions {
@@ -112,6 +136,7 @@ struct SentenceFlow: View {
                     roundTrailing: cell.isChunkEnd
                 )
                 .flowGap(gap(for: cell, in: cells))
+                .flowKeepWithPrevious(keepsWithPrevious(cell, in: cells))
                 .contentShape(Rectangle())
                 .onTapGesture { onWordTap?(cell.word) }
                 .allowsHitTesting(onWordTap != nil)
@@ -133,6 +158,13 @@ struct SentenceFlow: View {
         }
         if previous.word.pos == .punctuation { return 2 * WordCell.englishPadding }
         return cell.isChunkStart && annotated ? 5 : 0
+    }
+
+    /// Closing punctuation can't start a line, and an opening bracket/quote can't end one.
+    private func keepsWithPrevious(_ cell: Cell, in cells: [Cell]) -> Bool {
+        guard cell.id > 0 else { return false }
+        if cell.word.pos == .punctuation && !isOpening(cell, in: cells) { return true }
+        return isOpening(cells[cell.id - 1], in: cells)
     }
 
     /// Opening brackets/quotes attach to the following word; straight quotes alternate open/close.

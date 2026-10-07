@@ -175,14 +175,7 @@ struct ReaderView: View {
 
     private var playbackBar: some View {
         HStack(spacing: 12) {
-            Button {
-                if isPlayingThisStory && player.isPlayingAll {
-                    player.stop()
-                } else if let content {
-                    let all = content.allSentences
-                    play(from: selectedID ?? all.first?.id ?? 0, all: all, continuous: true)
-                }
-            } label: {
+            Button(action: togglePlayAll) {
                 Image(systemName: isPlayingThisStory && player.isPlayingAll ? "stop.fill" : "play.fill")
                     .font(.title3)
                     .frame(width: 44, height: 44)
@@ -203,8 +196,20 @@ struct ReaderView: View {
         .padding(.trailing, 18)
         .padding(.vertical, 8)
         .glassEffect(.regular, in: .capsule)
+        // The whole capsule is the control; otherwise taps fall through to the sentences underneath.
+        .contentShape(.capsule)
+        .onTapGesture(perform: togglePlayAll)
         .padding(.horizontal, 16)
         .padding(.bottom, 4)
+    }
+
+    private func togglePlayAll() {
+        if isPlayingThisStory && player.isPlayingAll {
+            player.stop()
+        } else if let content {
+            let all = content.allSentences
+            play(from: selectedID ?? all.first?.id ?? 0, all: all, continuous: true)
+        }
     }
 
     private var statusTitle: String {
