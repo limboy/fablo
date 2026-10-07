@@ -34,7 +34,7 @@ struct ReaderView: View {
                     let paragraphEnds = Set(content.numberedParagraphs.compactMap { $0.last?.id })
                     ForEach(all) { ref in
                         sentenceView(ref, all: all)
-                            .padding(.bottom, paragraphEnds.contains(ref.id) ? 40 : (story.language == .ja ? 26 : 20))
+                            .padding(.bottom, sentenceSpacing(after: ref.id, paragraphEnds: paragraphEnds))
                     }
                 } else {
                     ContentUnavailableView("无法读取这篇短文", systemImage: "exclamationmark.triangle")
@@ -139,6 +139,12 @@ struct ReaderView: View {
             },
             onAnalyze: { analysisTarget = ref }
         )
+    }
+
+    private func sentenceSpacing(after id: Int, paragraphEnds: Set<Int>) -> CGFloat {
+        let isJapanese = story.language == .ja
+        if paragraphEnds.contains(id) { return isJapanese ? 52 : 36 }
+        return isJapanese ? 32 : 20
     }
 
     private func play(from id: Int, all: [SentenceRef], continuous: Bool) {

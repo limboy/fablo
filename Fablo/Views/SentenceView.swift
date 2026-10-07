@@ -124,7 +124,7 @@ struct SentenceFlow: View {
 
     var body: some View {
         let cells = cells
-        FlowLayout(lineSpacing: language == .ja ? 10 : 8) {
+        FlowLayout(lineSpacing: lineSpacing) {
             ForEach(cells) { cell in
                 WordCell(
                     word: cell.word,
@@ -144,10 +144,21 @@ struct SentenceFlow: View {
         }
     }
 
+    /// Wrapped lines of one sentence sit close together so the sentence reads as a block;
+    /// in Japanese the (often empty) furigana row already separates lines.
+    private var lineSpacing: CGFloat {
+        guard language == .ja else { return 8 }
+        return options.showFurigana ? 0 : 6
+    }
+
     private func gap(for cell: Cell, in cells: [Cell]) -> CGFloat {
         guard cell.id > 0 else { return 0 }
         if language == .ja {
-            return cell.isChunkStart && cell.word.pos != .punctuation ? 10 : 0
+            // Full-width brackets already carry blank space inside the glyph; cancel the word padding.
+            if isOpening(cells[cell.id - 1], in: cells) { return -4 }
+            if ["」", "』", "）", ")"].contains(cell.word.surface) { return -4 }
+            if cell.word.pos == .punctuation { return isOpening(cell, in: cells) ? 8 : 0 }
+            return cell.isChunkStart ? 8 : 0
         }
         // English: words already carry WordCell.englishPadding on each side, which reads as a space.
         let previous = cells[cell.id - 1]
@@ -186,7 +197,7 @@ struct WordCell: View {
     let roundLeading: Bool
     let roundTrailing: Bool
 
-    static let englishPadding: CGFloat = 2.5
+    static let englishPadding: CGFloat = 2
 
     private var isJapanese: Bool { language == .ja }
     private var isPunctuation: Bool { word.pos == .punctuation }
@@ -195,25 +206,25 @@ struct WordCell: View {
         VStack(spacing: 1) {
             if isJapanese && options.showFurigana {
                 Text(word.furigana ?? " ")
-                    .font(.system(size: 12))
+                    .font(.system(size: 10))
                     .foregroundStyle(Theme.muted)
                     .lineLimit(1)
                     .fixedSize()
             }
             Text(word.surface)
-                .font(isJapanese ? .system(size: 24, weight: .bold) : .system(size: 21, weight: .medium, design: .serif))
+                .font(isJapanese ? .system(size: 20, weight: .bold) : .system(size: 18, weight: .medium, design: .serif))
                 .foregroundStyle(Theme.ink)
                 .fixedSize()
                 .background(alignment: .bottom) {
                     if let underline {
                         RoundedRectangle(cornerRadius: 2)
                             .fill(underline)
-                            .frame(height: 7)
+                            .frame(height: 6)
                             .padding(.horizontal, -1)
                             .offset(y: 2)
                     }
                 }
-                .padding(.horizontal, isJapanese ? (isPunctuation ? 2 : 5) : (isPunctuation ? 0 : Self.englishPadding))
+                .padding(.horizontal, isJapanese ? (isPunctuation ? 2 : 4) : (isPunctuation ? 0 : Self.englishPadding))
                 .padding(.vertical, 2)
                 .frame(maxWidth: .infinity)
                 .background {
@@ -229,7 +240,7 @@ struct WordCell: View {
                 }
             if isJapanese && options.showRomaji {
                 Text(word.romaji.isEmpty ? " " : word.romaji)
-                    .font(.system(size: 13))
+                    .font(.system(size: 11))
                     .foregroundStyle(Theme.muted)
                     .lineLimit(1)
                     .fixedSize()
@@ -265,7 +276,7 @@ struct SentenceView: View {
 
             if isSelected || showTranslation {
                 Text(ref.sentence.zh)
-                    .font(.system(size: isSelected ? 19 : 16))
+                    .font(.system(size: isSelected ? 17 : 15))
                     .foregroundStyle(Theme.muted)
                     .fixedSize(horizontal: false, vertical: true)
             }

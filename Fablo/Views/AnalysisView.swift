@@ -59,7 +59,7 @@ struct AnalysisView: View {
                 annotated: true
             )
             Text(ref.sentence.zh)
-                .font(.system(size: 18))
+                .font(.system(size: 16))
                 .foregroundStyle(Theme.muted)
             Button {
                 if isSpeaking {
