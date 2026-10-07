@@ -1,0 +1,25 @@
+name: Fablo
+options:
+  bundleIdPrefix: com.limboy
+  deploymentTarget:
+    iOS: "26.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    DEVELOPMENT_TEAM: ""
+targets:
+  Fablo:
+    type: application
+    platform: iOS
+    sources: [Fablo]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.limboy.fablo
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Fablo
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_UIBackgroundModes: audio
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_STYLE: Automatic

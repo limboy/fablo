@@ -1,0 +1,403 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		117D38F7B0AC736A1D0E2BF1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7CA770758DF9B935EFD3AE14 /* Assets.xcassets */; };
+		1E4A371B6B6A218FF863482B /* AnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EEDABEF9FC1B8B634D2B8EB /* AnalysisView.swift */; };
+		47DA18F4E700AD9F4578B936 /* Story.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89D470B222619FB890E3DD76 /* Story.swift */; };
+		52B7720FCDA4D79951AECA62 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A46D44646F63CC07E89E966 /* Theme.swift */; };
+		5EEAAE7ECF3DCDDC03D980B5 /* GatewayClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAFEC38F8939510190C112D7 /* GatewayClient.swift */; };
+		6C29F2A07FCB3992DA8BAA4C /* StoryGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4E8394212C5275F8D763DB0 /* StoryGenerator.swift */; };
+		89945705202AF2D72E165C74 /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4B617DFD42B0127EF4A880E /* ReaderView.swift */; };
+		A683595DD73F14CB9E298E2D /* StoryContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FDE6F2BC149FA4C582819AB /* StoryContent.swift */; };
+		C312FD72CD4474431324F631 /* FabloApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C8DB01715084EEE5A7E7B4 /* FabloApp.swift */; };
+		CB178DEEE8115AC40BCAD949 /* StoryStudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51F28837549B54ECBD9997CA /* StoryStudio.swift */; };
+		CF09A75D98FC9AAEFA57AEF5 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 687F969BB4789B0A9B6F6303 /* LibraryView.swift */; };
+		D06F0C75D0CE5C88852F2537 /* SpeechPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6C2742B42A411A17C63C138 /* SpeechPlayer.swift */; };
+		E1536E51755C12EE1BB83430 /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D418D5862196FEA8CE0790A /* Secrets.swift */; };
+		E7FF366F32C285A0EC8DFD31 /* SentenceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5DE80F0DAA23C54495704A5 /* SentenceView.swift */; };
+		EE6CDC510C8753244F0BA226 /* NewStoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5E6027822DCEDB2E022C7F8 /* NewStoryView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0EEDABEF9FC1B8B634D2B8EB /* AnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisView.swift; sourceTree = "<group>"; };
+		2A46D44646F63CC07E89E966 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		2FDE6F2BC149FA4C582819AB /* StoryContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryContent.swift; sourceTree = "<group>"; };
+		51F28837549B54ECBD9997CA /* StoryStudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryStudio.swift; sourceTree = "<group>"; };
+		59ECF81EDA5CE8AAF3615FF1 /* Fablo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Fablo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		687F969BB4789B0A9B6F6303 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		7CA770758DF9B935EFD3AE14 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		89D470B222619FB890E3DD76 /* Story.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Story.swift; sourceTree = "<group>"; };
+		8D418D5862196FEA8CE0790A /* Secrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Secrets.swift; sourceTree = "<group>"; };
+		A1C8DB01715084EEE5A7E7B4 /* FabloApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FabloApp.swift; sourceTree = "<group>"; };
+		BAFEC38F8939510190C112D7 /* GatewayClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayClient.swift; sourceTree = "<group>"; };
+		E4B617DFD42B0127EF4A880E /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
+		E5E6027822DCEDB2E022C7F8 /* NewStoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewStoryView.swift; sourceTree = "<group>"; };
+		F4E8394212C5275F8D763DB0 /* StoryGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryGenerator.swift; sourceTree = "<group>"; };
+		F5DE80F0DAA23C54495704A5 /* SentenceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SentenceView.swift; sourceTree = "<group>"; };
+		F6C2742B42A411A17C63C138 /* SpeechPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechPlayer.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		1F4F45C618B8198CC8640321 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				89D470B222619FB890E3DD76 /* Story.swift */,
+				2FDE6F2BC149FA4C582819AB /* StoryContent.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		224062517CF9426C68AE7AF1 = {
+			isa = PBXGroup;
+			children = (
+				9B456D59F19CFC2A5477CB06 /* Fablo */,
+				45405D6390A0571C0A169814 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		45405D6390A0571C0A169814 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				59ECF81EDA5CE8AAF3615FF1 /* Fablo.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		8D1945213C49B98C5BD190CB /* App */ = {
+			isa = PBXGroup;
+			children = (
+				A1C8DB01715084EEE5A7E7B4 /* FabloApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		9B456D59F19CFC2A5477CB06 /* Fablo */ = {
+			isa = PBXGroup;
+			children = (
+				8D1945213C49B98C5BD190CB /* App */,
+				1F4F45C618B8198CC8640321 /* Models */,
+				F22064904A3B3DCB296E4AA6 /* Resources */,
+				B6664A8BD002B2996DE5A821 /* Services */,
+				FDB0CB437CE542D85CB8F3AB /* Views */,
+			);
+			path = Fablo;
+			sourceTree = "<group>";
+		};
+		B6664A8BD002B2996DE5A821 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				BAFEC38F8939510190C112D7 /* GatewayClient.swift */,
+				8D418D5862196FEA8CE0790A /* Secrets.swift */,
+				F6C2742B42A411A17C63C138 /* SpeechPlayer.swift */,
+				F4E8394212C5275F8D763DB0 /* StoryGenerator.swift */,
+				51F28837549B54ECBD9997CA /* StoryStudio.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		F22064904A3B3DCB296E4AA6 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				7CA770758DF9B935EFD3AE14 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		FDB0CB437CE542D85CB8F3AB /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				0EEDABEF9FC1B8B634D2B8EB /* AnalysisView.swift */,
+				687F969BB4789B0A9B6F6303 /* LibraryView.swift */,
+				E5E6027822DCEDB2E022C7F8 /* NewStoryView.swift */,
+				E4B617DFD42B0127EF4A880E /* ReaderView.swift */,
+				F5DE80F0DAA23C54495704A5 /* SentenceView.swift */,
+				2A46D44646F63CC07E89E966 /* Theme.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		7A99039456743FF21CE69F45 /* Fablo */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 82C3D01E303BD9BE6EE3DE4E /* Build configuration list for PBXNativeTarget "Fablo" */;
+			buildPhases = (
+				A73B953555D6F16BCF3AB578 /* Sources */,
+				068F46528A4A2D35DD73E865 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Fablo;
+			packageProductDependencies = (
+			);
+			productName = Fablo;
+			productReference = 59ECF81EDA5CE8AAF3615FF1 /* Fablo.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		9D5CCE6194FA6898B061EEE7 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					7A99039456743FF21CE69F45 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 4CA24B5CF284E19FAF10EFA2 /* Build configuration list for PBXProject "Fablo" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 224062517CF9426C68AE7AF1;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 45405D6390A0571C0A169814 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				7A99039456743FF21CE69F45 /* Fablo */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		068F46528A4A2D35DD73E865 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				117D38F7B0AC736A1D0E2BF1 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A73B953555D6F16BCF3AB578 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E4A371B6B6A218FF863482B /* AnalysisView.swift in Sources */,
+				C312FD72CD4474431324F631 /* FabloApp.swift in Sources */,
+				5EEAAE7ECF3DCDDC03D980B5 /* GatewayClient.swift in Sources */,
+				CF09A75D98FC9AAEFA57AEF5 /* LibraryView.swift in Sources */,
+				EE6CDC510C8753244F0BA226 /* NewStoryView.swift in Sources */,
+				89945705202AF2D72E165C74 /* ReaderView.swift in Sources */,
+				E1536E51755C12EE1BB83430 /* Secrets.swift in Sources */,
+				E7FF366F32C285A0EC8DFD31 /* SentenceView.swift in Sources */,
+				D06F0C75D0CE5C88852F2537 /* SpeechPlayer.swift in Sources */,
+				47DA18F4E700AD9F4578B936 /* Story.swift in Sources */,
+				A683595DD73F14CB9E298E2D /* StoryContent.swift in Sources */,
+				6C29F2A07FCB3992DA8BAA4C /* StoryGenerator.swift in Sources */,
+				CB178DEEE8115AC40BCAD949 /* StoryStudio.swift in Sources */,
+				52B7720FCDA4D79951AECA62 /* Theme.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		334FE2ADF11CEBCA083ADD11 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		3698A3B5C6288FFF3F528AAB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		555293F78CFBFB4134F8D64F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Fablo;
+				INFOPLIST_KEY_UIBackgroundModes = audio;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.limboy.fablo;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		869D30DBFFA2EAC3D17110BD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Fablo;
+				INFOPLIST_KEY_UIBackgroundModes = audio;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.limboy.fablo;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		4CA24B5CF284E19FAF10EFA2 /* Build configuration list for PBXProject "Fablo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3698A3B5C6288FFF3F528AAB /* Debug */,
+				334FE2ADF11CEBCA083ADD11 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		82C3D01E303BD9BE6EE3DE4E /* Build configuration list for PBXNativeTarget "Fablo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				555293F78CFBFB4134F8D64F /* Debug */,
+				869D30DBFFA2EAC3D17110BD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 9D5CCE6194FA6898B061EEE7 /* Project object */;
+}

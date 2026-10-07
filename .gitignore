@@ -1,0 +1,4 @@
+Fablo/Services/Secrets.swift
+*.xcodeproj/xcuserdata
+build/
+.DS_Store
