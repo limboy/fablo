@@ -38,6 +38,7 @@
 		A1C8DB01715084EEE5A7E7B4 /* FabloApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FabloApp.swift; sourceTree = "<group>"; };
 		B899E85E1FA70DB5973A5E1D /* StoryAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryAudio.swift; sourceTree = "<group>"; };
 		BAFEC38F8939510190C112D7 /* GatewayClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayClient.swift; sourceTree = "<group>"; };
+		DD5D8EEEF6E769A59472DE00 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		E4B617DFD42B0127EF4A880E /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
 		E5E6027822DCEDB2E022C7F8 /* NewStoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewStoryView.swift; sourceTree = "<group>"; };
 		F4E8394212C5275F8D763DB0 /* StoryGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryGenerator.swift; sourceTree = "<group>"; };
@@ -82,6 +83,7 @@
 		9B456D59F19CFC2A5477CB06 /* Fablo */ = {
 			isa = PBXGroup;
 			children = (
+				DD5D8EEEF6E769A59472DE00 /* Info.plist */,
 				8D1945213C49B98C5BD190CB /* App */,
 				1F4F45C618B8198CC8640321 /* Models */,
 				F22064904A3B3DCB296E4AA6 /* Resources */,
@@ -345,8 +347,8 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Fablo/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Fablo;
-				INFOPLIST_KEY_UIBackgroundModes = audio;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -366,8 +368,8 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Fablo/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Fablo;
-				INFOPLIST_KEY_UIBackgroundModes = audio;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (

@@ -51,6 +51,9 @@ struct StoryAudioSource: Sendable {
     let storyID: UUID
     let language: StoryLanguage
     let level: String
+    /// For the lock screen / Control Center.
+    let title: String
+    let coverData: Data?
     /// paragraphs → sentences → words (surface forms, in display order)
     let paragraphs: [[[String]]]
 
@@ -58,6 +61,8 @@ struct StoryAudioSource: Sendable {
         storyID = story.id
         language = story.language
         level = story.level
+        title = story.title
+        coverData = story.coverData
         paragraphs = content.paragraphs.map { paragraph in
             paragraph.sentences.map { sentence in
                 sentence.chunks.flatMap { $0.words.map(\.surface) }

@@ -12,6 +12,7 @@ struct ReaderView: View {
     @AppStorage("showRomaji") private var showRomaji = true
     @AppStorage("showAllTranslations") private var showAllTranslations = false
     @AppStorage("speechRate") private var speechRate = 1.0
+    @AppStorage("loopPlayback") private var loopPlayback = false
 
     @State private var content: StoryContent?
     @State private var selectedID: Int?
@@ -153,7 +154,8 @@ struct ReaderView: View {
 
     private func play(from id: Int, continuous: Bool) {
         guard let content else { return }
-        player.play(StoryAudioSource(story: story, content: content), from: id, rate: speechRate, continuous: continuous)
+        player.play(StoryAudioSource(story: story, content: content), from: id, rate: speechRate,
+                    continuous: continuous, looping: loopPlayback)
     }
 
     // MARK: Chrome
@@ -193,6 +195,7 @@ struct ReaderView: View {
             if isPlayingThisStory && player.isLoading {
                 ProgressView()
             }
+            loopButton
             rateMenu
         }
         .padding(Self.barInset)
@@ -202,6 +205,21 @@ struct ReaderView: View {
         .onTapGesture(perform: togglePlayAll)
         .padding(.horizontal, 16)
         .padding(.bottom, 4)
+    }
+
+    private var loopButton: some View {
+        Button {
+            loopPlayback.toggle()
+        } label: {
+            Image(systemName: "repeat")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(loopPlayback ? Theme.accent : Theme.muted)
+                .frame(width: Self.barControlHeight, height: Self.barControlHeight)
+                .background(loopPlayback ? Theme.accent.opacity(0.15) : Theme.card, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(loopPlayback ? "循环播放：开" : "循环播放：关")
+        .onChange(of: loopPlayback) { _, looping in player.setLooping(looping) }
     }
 
     private static let rates = [0.5, 0.75, 1.0, 1.25, 1.5]
