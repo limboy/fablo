@@ -51,6 +51,7 @@ struct StoryAudioSource: Sendable {
     let storyID: UUID
     let language: StoryLanguage
     let level: String
+    let genre: String
     /// For the lock screen / Control Center.
     let title: String
     let coverData: Data?
@@ -61,6 +62,7 @@ struct StoryAudioSource: Sendable {
         storyID = story.id
         language = story.language
         level = story.level
+        genre = story.genre
         title = story.title
         coverData = story.coverData
         paragraphs = content.paragraphs.map { paragraph in
@@ -142,7 +144,7 @@ actor StoryAudioStore {
         let wav = try await GatewayClient.shared.speech(
             text: source.narrationText,
             voice: voice(for: source.language),
-            instructions: instructions(language: source.language, level: source.level)
+            instructions: instructions(language: source.language, level: source.level, genre: source.genre)
         )
         let wavURL = FileManager.default.temporaryDirectory.appending(path: "\(UUID()).wav")
         try wav.write(to: wavURL)
@@ -166,11 +168,14 @@ actor StoryAudioStore {
         language == .ja ? "Kore" : "Zephyr"
     }
 
-    private static func instructions(language: StoryLanguage, level: String) -> String {
+    private static func instructions(language: StoryLanguage, level: String, genre: String) -> String {
         let beginner = ["A1", "A2", "N5", "N4"].contains(level)
         let pace = beginner ? "slowly and very clearly" : "at a natural, relaxed pace"
         let accent = language == .ja ? "in standard Tokyo Japanese" : "in clear standard English"
-        return "Read this story aloud \(accent), \(pace), like an audiobook narrator for language learners. "
+        let style = genre == StoryGenre.talk.rawValue
+            ? "Deliver it like a warm, engaging speaker giving a TED-style talk to a live audience"
+            : "Read this story aloud like an audiobook narrator"
+        return "\(style), \(accent), \(pace), for language learners. "
             + "Pause briefly between sentences and a little longer between paragraphs."
     }
 
