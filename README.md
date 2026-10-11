@@ -2,6 +2,8 @@
 
 AI-generated reading practice for Chinese speakers learning English or Japanese. Pick a language, level, genre and length, and Fablo writes an original short story at your level, illustrates it, narrates it, and annotates every sentence.
 
+![](assets/s1.jpg)
+
 ## Features
 
 - **Stories at your level** — English (CEFR A1–C1) or Japanese (JLPT N5–N1), in 14 genres from everyday life and fables to news reports, dialogues and TED-style talks. Short, medium or long (about 6 / 12 / 20 sentences), with an optional topic.
