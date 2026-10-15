@@ -5,7 +5,7 @@ struct LibraryView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(SpeechPlayer.self) private var player
 
-    @State private var filter: StoryLanguage?
+    @State private var filter: StoryLanguage = .en
     @State private var showingNewStory = false
     @State private var showingBackendSettings = false
     @State private var path: [Story] = []
@@ -18,15 +18,6 @@ struct LibraryView: View {
         NavigationStack(path: $path) {
             ScrollView {
                 LazyVStack(spacing: 18) {
-                    Picker("语言", selection: $filter) {
-                        Text("全部").tag(StoryLanguage?.none)
-                        ForEach(StoryLanguage.allCases) { language in
-                            Text(language.nativeName).tag(Optional(language))
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .padding(.bottom, 4)
-
                     if let error = studio.errorMessage {
                         VStack(alignment: .leading, spacing: 8) {
                             Text(error).font(.callout).foregroundStyle(studio.isShowingCachedLibrary ? Theme.muted : .red)
@@ -42,7 +33,7 @@ struct LibraryView: View {
                     if entries.isEmpty {
                         if !studio.hasLoadedConnection || (stories.isEmpty && studio.jobs.isEmpty && studio.isRefreshing) {
                             ProgressView("正在读取书库…").padding(.top, 80)
-                        } else if let filter, !stories.isEmpty || !studio.jobs.isEmpty {
+                        } else if !stories.isEmpty || !studio.jobs.isEmpty {
                             ContentUnavailableView("还没有\(filter.chineseName)短文", systemImage: "books.vertical",
                                                    description: Text("切换语言或创作一篇新短文。"))
                         } else {
@@ -55,7 +46,6 @@ struct LibraryView: View {
             }
             .background(Theme.paper.ignoresSafeArea())
             .refreshable { await studio.refresh() }
-            .navigationTitle("Fablo")
             .toolbarTitleDisplayMode(.inline)
             .navigationDestination(for: Story.self) { story in
                 ReaderView(story: story)
@@ -63,6 +53,15 @@ struct LibraryView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("连接服务", systemImage: "gearshape") { showingBackendSettings = true }
+                }
+                ToolbarItem(placement: .principal) {
+                    Picker("语言", selection: $filter) {
+                        ForEach(StoryLanguage.allCases) { language in
+                            Text(language.chineseName).tag(language)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 160)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("新短文", systemImage: "plus") { showingNewStory = true }
