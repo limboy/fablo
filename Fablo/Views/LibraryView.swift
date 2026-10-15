@@ -40,7 +40,7 @@ struct LibraryView: View {
                     }
 
                     if entries.isEmpty {
-                        if stories.isEmpty && studio.jobs.isEmpty && studio.isRefreshing {
+                        if !studio.hasLoadedConnection || (stories.isEmpty && studio.jobs.isEmpty && studio.isRefreshing) {
                             ProgressView("正在读取书库…").padding(.top, 80)
                         } else if let filter, !stories.isEmpty || !studio.jobs.isEmpty {
                             ContentUnavailableView("还没有\(filter.chineseName)短文", systemImage: "books.vertical",
@@ -56,7 +56,7 @@ struct LibraryView: View {
             .background(Theme.paper.ignoresSafeArea())
             .refreshable { await studio.refresh() }
             .navigationTitle("Fablo")
-            .toolbarTitleDisplayMode(.inlineLarge)
+            .toolbarTitleDisplayMode(.inline)
             .navigationDestination(for: Story.self) { story in
                 ReaderView(story: story)
             }

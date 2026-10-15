@@ -8,6 +8,7 @@ final class StoryStudio {
     private(set) var client: BackendClient?
     private(set) var stories: [Story] = []
     private(set) var jobs: [BackendJob] = []
+    private(set) var hasLoadedConnection = false
     private(set) var isShowingCachedLibrary = false
     private(set) var connectionID = UUID()
     private let cache: BackendCache
@@ -22,10 +23,18 @@ final class StoryStudio {
     var coversInProgress: Set<UUID> { Set(stories.filter { ["queued", "running"].contains($0.coverStatus) }.map(\.id)) }
 
     func loadConnection() async {
+        await loadConnection(using: { try await BackendCredentials.shared.load() })
+    }
+
+    func loadConnection(using load: () async throws -> BackendConnection?) async {
+        defer { hasLoadedConnection = true }
         guard client == nil else { return }
+        let version = connectionVersion
         do {
-            if let connection = try await BackendCredentials.shared.load() { await connect(connection) }
-        } catch { errorMessage = error.localizedDescription }
+            if let connection = try await load(), version == connectionVersion { await connect(connection) }
+        } catch {
+            if version == connectionVersion { errorMessage = error.localizedDescription }
+        }
     }
 
     func connect(_ connection: BackendConnection) async {
@@ -42,6 +51,7 @@ final class StoryStudio {
         guard version == connectionVersion else { return }
         stories = cached.map { Story(record: $0, client: client) }
         isShowingCachedLibrary = !cached.isEmpty
+        hasLoadedConnection = true
     }
 
     func observe() async {

@@ -8,11 +8,16 @@ struct CacheContract {
         let env = ProcessInfo.processInfo.environment
         let connection = try BackendConnection(address: env["FABLO_TEST_URL"]!, token: env["FABLO_TEST_TOKEN"]!)
         let cache = BackendCache(root: URL(fileURLWithPath: env["FABLO_TEST_CACHE"]!))
+        let phase = env["FABLO_TEST_PHASE"]!
+        if phase == "startup" {
+            await verifyStartup(connection, cache: cache)
+            print("Cache contract passed: \(phase)")
+            return
+        }
         let studio = StoryStudio(cache: cache)
         await studio.connect(connection)
         let client = studio.client!
         let id = UUID(uuidString: env["FABLO_TEST_STORY"]!)!
-        let phase = env["FABLO_TEST_PHASE"]!
 
         switch phase {
         case "populate":
@@ -117,6 +122,32 @@ struct CacheContract {
         default: fatalError("Unknown cache test phase")
         }
         print("Cache contract passed: \(phase)")
+    }
+
+    @MainActor
+    static func verifyStartup(_ connection: BackendConnection, cache: BackendCache) async {
+        let studio = StoryStudio(cache: cache)
+        precondition(!studio.hasLoadedConnection && !studio.isConfigured)
+        await studio.loadConnection(using: {
+            await Task.yield()
+            // Awaiting stored credentials must not expose the unconfigured empty state.
+            precondition(!studio.hasLoadedConnection && !studio.isConfigured)
+            return connection
+        })
+        precondition(studio.hasLoadedConnection && studio.isConfigured)
+        precondition(studio.stories.count == 1 && studio.isShowingCachedLibrary)
+
+        let unconfigured = StoryStudio(cache: cache)
+        await unconfigured.loadConnection(using: {
+            await Task.yield()
+            precondition(!unconfigured.hasLoadedConnection)
+            return nil
+        })
+        precondition(unconfigured.hasLoadedConnection && !unconfigured.isConfigured)
+
+        let unavailable = StoryStudio(cache: cache)
+        await unavailable.loadConnection(using: { throw BackendError.message("Test credential read failure") })
+        precondition(unavailable.hasLoadedConnection && !unavailable.isConfigured && unavailable.errorMessage != nil)
     }
 
     static func verifyAssets(_ story: Story) async throws {

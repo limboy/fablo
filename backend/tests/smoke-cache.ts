@@ -67,6 +67,7 @@ try {
   check(!requests.some(path => path.endsWith("/status")), "Known audio versions unexpectedly requested server status");
   await server.stop(true);
   server = undefined;
+  await phase("startup");
   await phase("offline");
   console.info("Fresh client process read the library, text, analysis, cover, audio and timeline with the server stopped");
   story.content = { ...story.content, title: "Updated Morning" };
