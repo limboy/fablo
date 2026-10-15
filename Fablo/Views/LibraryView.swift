@@ -191,8 +191,11 @@ private struct LibraryEntryCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let story = entry.story {
-                NavigationLink(value: story) { StoryCard(story: story) }
-                    .buttonStyle(.plain)
+                NavigationLink(value: story) {
+                    StoryCard(story: story)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
                 HStack {
                     ReadingStatusMenu(story: story)
                     Spacer()

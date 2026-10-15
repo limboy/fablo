@@ -345,6 +345,8 @@ struct CoverView: View {
                 }
             }
         }
+        // Clipping hides oversized cover pixels; bound hit testing as well so they cannot steal nearby taps.
+        .contentShape(.rect)
         .task(id: story.coverVersion) { await loadCover() }
     }
 

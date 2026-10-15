@@ -20,6 +20,8 @@ struct ReadingStatusMenu: View {
                 else { Image(systemName: "chevron.down").font(.caption2.weight(.semibold)) }
             }
             .font(.subheadline.weight(.medium))
+            .frame(minHeight: 44)
+            .contentShape(.rect)
         }
         .accessibilityLabel("阅读状态，\(story.readingStatus.title)")
         .accessibilityHint("切换待读、在读或已读")
