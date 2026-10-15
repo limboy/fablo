@@ -1,7 +1,10 @@
 import { Database } from "bun:sqlite";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { APIError, type AssetStatus, type GenerationRequest, type Job, type JobKind, type StoryRecord } from "./types";
+import { APIError, type AssetStatus, type GenerationRequest, type Job, type JobKind, type ReadingStatus, type StoryRecord } from "./types";
+
+interface StoryRow { document: string; reading_status: ReadingStatus | null; reading_revision: number | null }
+const storySelect = "SELECT s.document, r.status AS reading_status, r.revision AS reading_revision FROM stories s LEFT JOIN reading_states r ON r.story_id=s.id";
 
 interface JobRow {
   id: string; kind: JobKind; story_id: string; status: Job["status"]; payload: string;
@@ -20,6 +23,7 @@ export class Store {
     this.db.run("PRAGMA synchronous=FULL");
     this.db.run(`
       CREATE TABLE IF NOT EXISTS stories (id TEXT PRIMARY KEY, document TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS reading_states (story_id TEXT PRIMARY KEY, status TEXT NOT NULL CHECK(status IN ('unread','reading','read')), revision INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS jobs (
         id TEXT PRIMARY KEY, kind TEXT NOT NULL, story_id TEXT NOT NULL, status TEXT NOT NULL,
         payload TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
@@ -48,34 +52,50 @@ export class Store {
     `).run(new Date().toISOString());
   }
   close() { this.db.close(); }
+  private story(row: StoryRow): StoryRecord {
+    return { ...JSON.parse(row.document), readingStatus: row.reading_status ?? "unread", readingStatusRevision: row.reading_revision ?? 0 };
+  }
   getStory(id: string): StoryRecord | null {
-    const row = this.db.query<{ document: string }, [string]>("SELECT document FROM stories WHERE id=?").get(id);
-    return row ? JSON.parse(row.document) : null;
+    const row = this.db.query<StoryRow, [string]>(`${storySelect} WHERE s.id=?`).get(id);
+    return row ? this.story(row) : null;
   }
   listStories(limit = 50, offset = 0): StoryRecord[] {
-    return this.db.query<{ document: string }, [number, number]>("SELECT document FROM stories ORDER BY created_at DESC, id LIMIT ? OFFSET ?").all(limit, offset).map(r => JSON.parse(r.document));
+    return this.db.query<StoryRow, [number, number]>(`${storySelect} ORDER BY s.created_at DESC, s.id LIMIT ? OFFSET ?`).all(limit, offset).map(r => this.story(r));
   }
   countStories(): number { return this.db.query<{ count: number }, []>("SELECT count(*) AS count FROM stories").get()!.count; }
   revision(): number { return this.db.query<{ value: number }, []>("SELECT value FROM settings WHERE key='revision'").get()!.value; }
   pageStories(limit: number, cursor: { createdAt: string; id: string } | null): StoryRecord[] {
     const rows = cursor
-      ? this.db.query<{ document: string }, [string, string, string, number]>("SELECT document FROM stories WHERE created_at<? OR (created_at=? AND id>?) ORDER BY created_at DESC,id LIMIT ?").all(cursor.createdAt, cursor.createdAt, cursor.id, limit)
-      : this.db.query<{ document: string }, [number]>("SELECT document FROM stories ORDER BY created_at DESC,id LIMIT ?").all(limit);
-    return rows.map(row => JSON.parse(row.document));
+      ? this.db.query<StoryRow, [string, string, string, number]>(`${storySelect} WHERE s.created_at<? OR (s.created_at=? AND s.id>?) ORDER BY s.created_at DESC,s.id LIMIT ?`).all(cursor.createdAt, cursor.createdAt, cursor.id, limit)
+      : this.db.query<StoryRow, [number]>(`${storySelect} ORDER BY s.created_at DESC,s.id LIMIT ?`).all(limit);
+    return rows.map(row => this.story(row));
   }
   deleteStory(id: string) {
     this.db.transaction(() => {
       // A worker may still hold a snapshot. Removing its lease prevents publishing it.
       this.db.query("UPDATE jobs SET status='completed',lease_owner=NULL,lease_until=NULL,error=NULL WHERE story_id=?").run(id);
       this.db.query("DELETE FROM stories WHERE id=?").run(id);
+      this.db.query("DELETE FROM reading_states WHERE story_id=?").run(id);
     }).immediate();
   }
   owns(job: ClaimedJob): boolean {
     return !!this.db.query("SELECT id FROM jobs WHERE id=? AND lease_owner=? AND status='running' AND lease_until>?").get(job.id, job.leaseOwner, Date.now());
   }
   saveStory(story: StoryRecord) {
+    const { readingStatus, readingStatusRevision, ...document } = story;
     this.db.query("INSERT INTO stories VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET document=excluded.document, updated_at=excluded.updated_at")
-      .run(story.id, JSON.stringify(story), story.createdAt, story.updatedAt);
+      .run(story.id, JSON.stringify(document), story.createdAt, story.updatedAt);
+  }
+  setReadingStatus(id: string, status: ReadingStatus): StoryRecord {
+    return this.db.transaction(() => {
+      const story = this.getStory(id);
+      if (!story) throw new APIError(404, "短文不存在");
+      if (story.readingStatus === status) return story;
+      this.db.query("UPDATE settings SET value=value+1 WHERE key='revision'").run();
+      this.db.query("INSERT INTO reading_states VALUES (?,?,?) ON CONFLICT(story_id) DO UPDATE SET status=excluded.status,revision=excluded.revision")
+        .run(id, status, this.revision());
+      return this.getStory(id)!;
+    }).immediate();
   }
   assetStatus(id: string, kind: "cover" | "audio", status: AssetStatus, version?: string) {
     this.db.transaction(() => {

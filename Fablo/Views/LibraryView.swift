@@ -6,13 +6,15 @@ struct LibraryView: View {
     @Environment(SpeechPlayer.self) private var player
 
     @State private var filter: StoryLanguage = .en
+    @State private var board: ReadingStatus = .unread
     @State private var showingNewStory = false
     @State private var showingBackendSettings = false
     @State private var path: [Story] = []
 
     private var stories: [Story] { studio.stories }
 
-    private var entries: [LibraryEntry] { LibraryEntry.make(stories: stories, jobs: studio.jobs, language: filter) }
+    private var languageEntries: [LibraryEntry] { LibraryEntry.make(stories: stories, jobs: studio.jobs, language: filter) }
+    private var entries: [LibraryEntry] { languageEntries.filter { $0.readingStatus == board } }
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -34,8 +36,8 @@ struct LibraryView: View {
                         if !studio.hasLoadedConnection || (stories.isEmpty && studio.jobs.isEmpty && studio.isRefreshing) {
                             ProgressView("正在读取书库…").padding(.top, 80)
                         } else if !stories.isEmpty || !studio.jobs.isEmpty {
-                            ContentUnavailableView("还没有\(filter.chineseName)短文", systemImage: "books.vertical",
-                                                   description: Text("切换语言或创作一篇新短文。"))
+                            ContentUnavailableView("没有\(board.title)的\(filter.chineseName)短文", systemImage: board.systemImage,
+                                                   description: Text(board == .unread ? "切换看板，或创作一篇新短文。" : "在短文卡片的状态菜单中，将短文移到这里。"))
                         } else {
                             emptyState
                         }
@@ -46,6 +48,7 @@ struct LibraryView: View {
             }
             .background(Theme.paper.ignoresSafeArea())
             .refreshable { await studio.refresh() }
+            .safeAreaInset(edge: .bottom, spacing: 0) { readingBoards }
             .toolbarTitleDisplayMode(.inline)
             .navigationDestination(for: Story.self) { story in
                 ReaderView(story: story)
@@ -88,6 +91,39 @@ struct LibraryView: View {
                 }
             }
         }
+    }
+
+    private var readingBoards: some View {
+        HStack(spacing: 6) {
+            ForEach(ReadingStatus.allCases) { status in
+                let count = languageEntries.filter { $0.readingStatus == status }.count
+                Button {
+                    withAnimation(.snappy(duration: 0.25)) { board = status }
+                } label: {
+                    VStack(spacing: 5) {
+                        Image(systemName: status.systemImage).font(.system(size: 19, weight: .semibold))
+                        HStack(spacing: 4) {
+                            Text(status.title)
+                            Text(count, format: .number).monospacedDigit()
+                        }
+                        .font(.caption.weight(.semibold))
+                    }
+                    .foregroundStyle(board == status ? .white : Theme.muted)
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: 58)
+                    .background(board == status ? Theme.accent : .clear, in: Capsule())
+                    .contentShape(.capsule)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(status.title)，\(count)篇短文")
+                .accessibilityAddTraits(board == status ? .isSelected : [])
+            }
+        }
+        .padding(6)
+        .glassEffect(.regular, in: .capsule)
+        .padding(.horizontal, 24)
+        .padding(.bottom, 8)
+        .padding(.top, 8)
     }
 
     private var emptyState: some View {
@@ -157,6 +193,12 @@ private struct LibraryEntryCard: View {
             if let story = entry.story {
                 NavigationLink(value: story) { StoryCard(story: story) }
                     .buttonStyle(.plain)
+                HStack {
+                    ReadingStatusMenu(story: story)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
             } else {
                 HStack(alignment: .top, spacing: 14) {
                     Image(systemName: entry.request?.storyRequest.genre.symbol ?? "sparkles")

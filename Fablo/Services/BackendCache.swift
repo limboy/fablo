@@ -134,6 +134,9 @@ actor BackendCache {
         // A slow detail response must not roll back newer resource metadata.
         var merged = record.updatedAt < previous.updatedAt ? previous : record
         let fallback = record.updatedAt < previous.updatedAt ? record : previous
+        let progress = (record.readingStatusRevision ?? 0) >= (previous.readingStatusRevision ?? 0) ? record : previous
+        merged.readingStatus = progress.readingStatus
+        merged.readingStatusRevision = progress.readingStatusRevision
         if merged.content == nil { merged.content = fallback.content }
         if merged.analyses == nil { merged.analyses = fallback.analyses }
         return merged

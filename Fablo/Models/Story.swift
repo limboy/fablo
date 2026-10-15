@@ -6,6 +6,9 @@ import Observation
 final class Story: Identifiable, Hashable {
     let id: UUID
     let client: BackendClient
+    private(set) var readingStatus: ReadingStatus
+    private(set) var isUpdatingReadingStatus = false
+    private var readingStatusRevision: Int
     private(set) var createdAt: Date
     private(set) var updatedAt: String
     private(set) var language: StoryLanguage
@@ -26,6 +29,8 @@ final class Story: Identifiable, Hashable {
     init(record: BackendStory, client: BackendClient) {
         id = record.id
         self.client = client
+        readingStatus = record.readingStatus ?? .unread
+        readingStatusRevision = record.readingStatusRevision ?? 0
         createdAt = Self.date(record.createdAt)
         updatedAt = record.updatedAt
         language = record.language
@@ -44,6 +49,10 @@ final class Story: Identifiable, Hashable {
     }
 
     func apply(_ record: BackendStory) {
+        if (record.readingStatusRevision ?? 0) >= readingStatusRevision {
+            readingStatus = record.readingStatus ?? .unread
+            readingStatusRevision = record.readingStatusRevision ?? 0
+        }
         guard record.updatedAt >= updatedAt else { restoreCachedDetails(record); return }
         createdAt = Self.date(record.createdAt)
         updatedAt = record.updatedAt
@@ -74,6 +83,14 @@ final class Story: Identifiable, Hashable {
     func decodedContent() -> StoryContent? { content }
     func analysis(for index: Int) -> SentenceAnalysis? { analyses[String(index)] }
     func setAnalysis(_ analysis: SentenceAnalysis, for index: Int) { analyses[String(index)] = analysis }
+
+    @MainActor
+    func setReadingStatus(_ status: ReadingStatus) async throws {
+        guard status != readingStatus, !isUpdatingReadingStatus else { return }
+        isUpdatingReadingStatus = true
+        defer { isUpdatingReadingStatus = false }
+        apply(try await client.setReadingStatus(status, for: id))
+    }
 
     static func date(_ value: String) -> Date {
         let formatter = ISO8601DateFormatter()

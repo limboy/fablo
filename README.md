@@ -13,6 +13,7 @@ AI-generated reading practice for Chinese speakers learning English or Japanese.
 - **Narration** — the whole story is narrated in one pass with word-level highlighting, adjustable speed, pause/resume, looping, and background playback.
 - **Cover art** — each story gets a storybook-style illustration.
 - **Offline reading** — downloaded stories, sentence analyses, covers and narration are cached on device. Cached content opens first while the app syncs with the server in the background.
+- **Reading boards** — switch between 待读, 在读 and 已读 at the bottom of the library. Move stories with the status menu on a card or in the reader. Each board respects the selected language and shows its count; new stories start in 待读. Reading state is saved on the server and shared across devices. Previously synchronized states remain visible offline; changing a state requires a connection.
 
 All explanations are in Simplified Chinese.
 

@@ -53,7 +53,8 @@ try {
   const binary = join(directory, "CacheContract");
   const sources = [
     "Fablo/Models/StoryContent.swift", "Fablo/Services/BackendCache.swift", "Fablo/Services/BackendClient.swift", "Fablo/Models/Story.swift",
-    "Fablo/Services/BackendCredentials.swift", "Fablo/Services/StoryStudio.swift", "Fablo/Services/StoryAudio.swift", "backend/tests/CacheContract.swift",
+    "Fablo/Models/LibraryEntry.swift", "Fablo/Models/ReadingStatus.swift", "Fablo/Services/BackendCredentials.swift",
+    "Fablo/Services/StoryStudio.swift", "Fablo/Services/StoryAudio.swift", "backend/tests/CacheContract.swift",
   ];
   await command(["swiftc", "-swift-version", "5", "-module-cache-path", join(directory, "swift-cache"), ...sources.map(path => join(project, path)), "-o", binary]);
   await assets();
@@ -80,7 +81,7 @@ try {
   await phase("authorization");
   store.deleteStory(story.id);
   await phase("deletion");
-  console.info("Version refresh, corrupt cache recovery, credential isolation and deletion cleanup passed");
+  console.info("Version refresh, synchronized reading boards, offline reading state, credential isolation and deletion cleanup passed");
 } finally {
   await server?.stop(true);
   store.close();

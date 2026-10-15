@@ -25,7 +25,7 @@ try {
   console.info("All prepared stories imported twice without duplicates or generation jobs");
   if (Bun.which("swiftc")) {
     const project = resolve(import.meta.dir, "../..");
-    const sources = ["Fablo/Models/StoryContent.swift", "Fablo/Services/BackendCache.swift", "Fablo/Services/BackendClient.swift", "Fablo/Models/Story.swift", "Fablo/Services/StoryAudio.swift", "backend/tests/ImportContract.swift"];
+    const sources = ["Fablo/Models/StoryContent.swift", "Fablo/Models/ReadingStatus.swift", "Fablo/Services/BackendCache.swift", "Fablo/Services/BackendClient.swift", "Fablo/Models/Story.swift", "Fablo/Services/StoryAudio.swift", "backend/tests/ImportContract.swift"];
     const binary = join(directory, "ImportContract");
     const compile = Bun.spawn(["swiftc", "-swift-version", "5", "-module-cache-path", join(directory, "swift-cache"), ...sources.map(path => join(project, path)), "-o", binary], { stdout: "pipe", stderr: "pipe" });
     const [stdout, stderr, code] = await Promise.all([new Response(compile.stdout).text(), new Response(compile.stderr).text(), compile.exited]);

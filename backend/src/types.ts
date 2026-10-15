@@ -18,12 +18,14 @@ export interface Analysis {
   nuance: string;
 }
 export type AssetStatus = "missing" | "queued" | "running" | "ready" | "failed";
+export type ReadingStatus = "unread" | "reading" | "read";
 export interface StoryRecord {
   id: string; createdAt: string; updatedAt: string; language: Language; level: string; genre: string;
   generationRequest: GenerationRequest | null;
   content: StoryContent; analyses: Record<string, Analysis>;
   coverStatus: AssetStatus; audioStatus: AssetStatus;
   coverVersion: string | null; audioVersion: string | null;
+  readingStatus?: ReadingStatus; readingStatusRevision?: number;
   importedFrom?: { format: string; id: string; checksum: string; metadata: Record<string, unknown> };
 }
 export interface Timeline {

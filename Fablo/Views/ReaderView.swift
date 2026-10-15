@@ -63,6 +63,7 @@ struct ReaderView: View {
         .background(Theme.paper.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) { ReadingStatusMenu(story: story) }
             ToolbarItem(placement: .topBarTrailing) { settingsMenu }
         }
         .safeAreaInset(edge: .bottom) { playbackBar }

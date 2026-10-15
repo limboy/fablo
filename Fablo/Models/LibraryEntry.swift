@@ -10,6 +10,7 @@ struct LibraryEntry: Identifiable {
         story?.generationRequest ?? jobs.first { $0.kind == "story" }?.request ?? jobs.compactMap(\.request).first
     }
     var language: StoryLanguage? { story?.language ?? request?.language }
+    var readingStatus: ReadingStatus { story?.readingStatus ?? .unread }
     private var createdAt: Date { story?.createdAt ?? jobs.map { Story.date($0.createdAt) }.min() ?? .distantPast }
 
     static func make(stories: [Story], jobs: [BackendJob], language: StoryLanguage?) -> [LibraryEntry] {

@@ -75,6 +75,8 @@ struct BackendStory: Codable, Sendable {
     let coverVersion: String?
     let audioVersion: String?
     let generationRequest: BackendGenerationRequest?
+    var readingStatus: ReadingStatus?
+    var readingStatusRevision: Int?
     var content: StoryContent?
     var analyses: [String: SentenceAnalysis]?
 }
@@ -181,6 +183,16 @@ struct BackendClient: Sendable {
     func jobs() async throws -> [BackendJob] {
         struct Result: Decodable { let jobs: [BackendJob] }
         return try JSONDecoder().decode(Result.self, from: await data("v1/jobs")).jobs
+    }
+
+    func setReadingStatus(_ status: ReadingStatus, for id: UUID) async throws -> BackendStory {
+        struct Update: Encodable { let status: ReadingStatus }
+        let generation = await cache.generation(for: connection)
+        let record = try JSONDecoder().decode(BackendStory.self, from: await data("v1/stories/\(id.uuidString)/reading-status",
+            method: "POST", body: JSONEncoder().encode(Update(status: status))))
+        try Task.checkCancellation()
+        guard let saved = await cache.saveStory(record, for: connection, generation: generation) else { throw CancellationError() }
+        return saved
     }
 
     func create(_ request: StoryRequest, idempotencyKey: UUID) async throws -> BackendJob {

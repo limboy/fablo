@@ -71,7 +71,8 @@ final class StoryStudio {
         do {
             async let records = client.stories()
             async let pending = client.jobs()
-            let (remote, jobs) = try await (records, pending)
+            // Surface an auth failure before the public read's invalidated cache can cancel it.
+            let (jobs, remote) = try await (pending, records)
             guard version == connectionVersion else { return }
             let existing = Dictionary(uniqueKeysWithValues: stories.map { ($0.id, $0) })
             stories = remote.map { record in

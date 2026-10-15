@@ -6,9 +6,9 @@ struct CacheContract {
     @MainActor
     static func main() async throws {
         let env = ProcessInfo.processInfo.environment
+        let phase = env["FABLO_TEST_PHASE"]!
         let connection = try BackendConnection(address: env["FABLO_TEST_URL"]!, token: env["FABLO_TEST_TOKEN"]!)
         let cache = BackendCache(root: URL(fileURLWithPath: env["FABLO_TEST_CACHE"]!))
-        let phase = env["FABLO_TEST_PHASE"]!
         if phase == "startup" {
             await verifyStartup(connection, cache: cache)
             print("Cache contract passed: \(phase)")
@@ -24,13 +24,39 @@ struct CacheContract {
             precondition(studio.stories.isEmpty)
             await studio.refresh()
             guard let story = studio.stories.first else { fatalError(studio.errorMessage ?? "Missing server story") }
-            story.apply(try await client.story(id))
+            let record = try await client.story(id)
+            story.apply(record)
+            precondition(story.readingStatus == .unread)
+            var readingRevision = 0
+            let secondClient = BackendClient(connection: connection, cache: BackendCache(root: cache.root.appending(path: "second-client")))
+            for status in [ReadingStatus.reading, .read, .unread, .reading] {
+                try await story.setReadingStatus(status)
+                let remote = try await secondClient.story(id)
+                precondition(story.readingStatus == status && remote.readingStatus == status)
+                precondition(remote.readingStatusRevision! > readingRevision)
+                readingRevision = remote.readingStatusRevision!
+                let entries = LibraryEntry.make(stories: [story], jobs: [], language: .en)
+                precondition(entries.filter { $0.readingStatus == status }.count == 1)
+                precondition(entries.filter { $0.readingStatus != status }.isEmpty)
+                precondition(LibraryEntry.make(stories: [story], jobs: [], language: .ja).isEmpty)
+            }
+            // Slow content responses must not roll back newer reading state.
+            story.apply(record)
+            precondition(story.readingStatus == .reading)
+            let generation = await cache.generation(for: connection)
+            let stale = await cache.saveStory(record, for: connection, generation: generation)
+            precondition(stale?.readingStatus == .reading)
+            var legacy = record
+            legacy.readingStatus = nil
+            legacy.readingStatusRevision = nil
+            precondition(Story(record: legacy, client: client).readingStatus == .unread)
             precondition(story.decodedContent()?.allSentences.count == 2)
             try await verifyAssets(story)
             let analysis = try await client.analysis(for: id, sentence: 0)
             precondition(!analysis.structure.isEmpty)
             // A summary-only poll must preserve the downloaded text and analysis.
             await studio.refresh()
+            precondition(studio.stories[0].readingStatus == .reading)
             let reopened = BackendCache(root: cache.root)
             let records = await reopened.library(for: connection)
             precondition(records.count == 1 && records[0].content?.allSentences.count == 2)
@@ -44,6 +70,12 @@ struct CacheContract {
         case "offline":
             precondition(studio.stories.count == 1 && studio.isShowingCachedLibrary)
             let story = studio.stories[0]
+            precondition(story.readingStatus == .reading)
+            do {
+                try await story.setReadingStatus(.read)
+                fatalError("Offline updates must not claim to be synchronized")
+            } catch { }
+            precondition(story.readingStatus == .reading && !story.isUpdatingReadingStatus)
             precondition(story.decodedContent()?.allSentences.count == 2)
             precondition(story.analysis(for: 0) != nil)
             // The mock server is stopped. Any status/download request would fail.
@@ -61,6 +93,11 @@ struct CacheContract {
             await studio.refresh()
             precondition(studio.errorMessage == nil && !studio.isShowingCachedLibrary)
             let story = studio.stories[0]
+            precondition(story.readingStatus == .reading)
+            let otherClient = BackendClient(connection: connection, cache: BackendCache(root: cache.root.appending(path: "other-device")))
+            _ = try await otherClient.setReadingStatus(.read, for: id)
+            await studio.refresh()
+            precondition(story.readingStatus == .read)
             precondition(story.coverVersion != oldCover && story.audioVersion != oldAudio)
             story.apply(try await client.story(id))
             precondition(story.title == "Updated Morning" && story.decodedContent()?.title == "Updated Morning")
@@ -136,6 +173,7 @@ struct CacheContract {
         })
         precondition(studio.hasLoadedConnection && studio.isConfigured)
         precondition(studio.stories.count == 1 && studio.isShowingCachedLibrary)
+        precondition(studio.stories[0].readingStatus == .reading)
 
         let unconfigured = StoryStudio(cache: cache)
         await unconfigured.loadConnection(using: {

@@ -18,11 +18,13 @@
 		89945705202AF2D72E165C74 /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4B617DFD42B0127EF4A880E /* ReaderView.swift */; };
 		941261C2AEB3E9FE160B5EA4 /* LibraryEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 348A71C93E3D4F867FF43132 /* LibraryEntry.swift */; };
 		A683595DD73F14CB9E298E2D /* StoryContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FDE6F2BC149FA4C582819AB /* StoryContent.swift */; };
+		C167235394BA8D4EA41A53EB /* ReadingStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88E8DAA6D034D81C5B0A33C8 /* ReadingStatus.swift */; };
 		C312FD72CD4474431324F631 /* FabloApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C8DB01715084EEE5A7E7B4 /* FabloApp.swift */; };
 		CB178DEEE8115AC40BCAD949 /* StoryStudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51F28837549B54ECBD9997CA /* StoryStudio.swift */; };
 		CF09A75D98FC9AAEFA57AEF5 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 687F969BB4789B0A9B6F6303 /* LibraryView.swift */; };
 		D06F0C75D0CE5C88852F2537 /* SpeechPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6C2742B42A411A17C63C138 /* SpeechPlayer.swift */; };
 		D2D851C757E1FFC930546ED7 /* BackendSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31D9A1EA981879E9590AA50C /* BackendSettingsView.swift */; };
+		E19792ACBFD40430B8A49B9B /* ReadingStatusMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5A3737716794B180AFFA402 /* ReadingStatusMenu.swift */; };
 		E7FF366F32C285A0EC8DFD31 /* SentenceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5DE80F0DAA23C54495704A5 /* SentenceView.swift */; };
 		EE6CDC510C8753244F0BA226 /* NewStoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5E6027822DCEDB2E022C7F8 /* NewStoryView.swift */; };
 /* End PBXBuildFile section */
@@ -37,10 +39,12 @@
 		59ECF81EDA5CE8AAF3615FF1 /* Fablo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Fablo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		687F969BB4789B0A9B6F6303 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		7CA770758DF9B935EFD3AE14 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		88E8DAA6D034D81C5B0A33C8 /* ReadingStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingStatus.swift; sourceTree = "<group>"; };
 		89D470B222619FB890E3DD76 /* Story.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Story.swift; sourceTree = "<group>"; };
 		A1C8DB01715084EEE5A7E7B4 /* FabloApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FabloApp.swift; sourceTree = "<group>"; };
 		B6CDC3D280692DDADFEDBEF6 /* BackendClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendClient.swift; sourceTree = "<group>"; };
 		B899E85E1FA70DB5973A5E1D /* StoryAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryAudio.swift; sourceTree = "<group>"; };
+		C5A3737716794B180AFFA402 /* ReadingStatusMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingStatusMenu.swift; sourceTree = "<group>"; };
 		CEAF422C14D7DE396B750694 /* BackendCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendCache.swift; sourceTree = "<group>"; };
 		DA22406E392073613376524A /* BackendCredentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendCredentials.swift; sourceTree = "<group>"; };
 		DD5D8EEEF6E769A59472DE00 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -55,6 +59,7 @@
 			isa = PBXGroup;
 			children = (
 				348A71C93E3D4F867FF43132 /* LibraryEntry.swift */,
+				88E8DAA6D034D81C5B0A33C8 /* ReadingStatus.swift */,
 				89D470B222619FB890E3DD76 /* Story.swift */,
 				2FDE6F2BC149FA4C582819AB /* StoryContent.swift */,
 			);
@@ -127,6 +132,7 @@
 				687F969BB4789B0A9B6F6303 /* LibraryView.swift */,
 				E5E6027822DCEDB2E022C7F8 /* NewStoryView.swift */,
 				E4B617DFD42B0127EF4A880E /* ReaderView.swift */,
+				C5A3737716794B180AFFA402 /* ReadingStatusMenu.swift */,
 				F5DE80F0DAA23C54495704A5 /* SentenceView.swift */,
 				2A46D44646F63CC07E89E966 /* Theme.swift */,
 			);
@@ -214,6 +220,8 @@
 				CF09A75D98FC9AAEFA57AEF5 /* LibraryView.swift in Sources */,
 				EE6CDC510C8753244F0BA226 /* NewStoryView.swift in Sources */,
 				89945705202AF2D72E165C74 /* ReaderView.swift in Sources */,
+				C167235394BA8D4EA41A53EB /* ReadingStatus.swift in Sources */,
+				E19792ACBFD40430B8A49B9B /* ReadingStatusMenu.swift in Sources */,
 				E7FF366F32C285A0EC8DFD31 /* SentenceView.swift in Sources */,
 				D06F0C75D0CE5C88852F2537 /* SpeechPlayer.swift in Sources */,
 				47DA18F4E700AD9F4578B936 /* Story.swift in Sources */,

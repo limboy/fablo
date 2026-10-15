@@ -5,7 +5,7 @@ import { createHandler } from "../src/server";
 import { Store } from "../src/store";
 import { Worker } from "../src/worker";
 import { publishAssets } from "../src/assets";
-import { APIError, parseContent, parseRequest, parseTimeline } from "../src/types";
+import { APIError, parseContent, parseRequest, parseTimeline, type StoryRecord } from "../src/types";
 import { align, estimate } from "../src/timeline";
 import { config, request, content, record, provider, analysis } from "./fixtures";
 
@@ -92,7 +92,7 @@ describe("API and persistent jobs", () => {
       ["GET", "/v1/jobs"], ["GET", `/v1/jobs/${job.id}`],
       ["POST", `/v1/jobs/${job.id}/retry`], ["DELETE", `/v1/jobs/${job.id}`],
       ["DELETE", `/v1/stories/${story.id}`],
-      ...["cover", "audio", "analyses/0", "analyses/1", "assets/cover"].map(action => ["POST", `/v1/stories/${story.id}/${action}`]),
+      ...["cover", "audio", "analyses/0", "analyses/1", "assets/cover", "reading-status"].map(action => ["POST", `/v1/stories/${story.id}/${action}`]),
     ];
     for (const [method, path] of protectedRoutes) {
       expect((await call(path!, { method }, false)).status).toBe(401);
@@ -125,6 +125,60 @@ describe("API and persistent jobs", () => {
       expect(blocked.headers.get("access-control-allow-origin")).toBeNull();
     }
     expect((await call("/v1/generations", { method: "POST", headers: { Origin: origin, "Access-Control-Request-Method": "GET" } })).status).toBe(403);
+  });
+
+  test("reading boards are shared across clients and survive restarts without creating jobs", async () => {
+    const { call, post, store, settings } = environment(), story = record(), other = record();
+    store.saveStory(story); store.saveStory(other);
+    const path = `/v1/stories/${story.id}/reading-status`;
+    expect((await (await call(`/v1/stories/${story.id}`, {}, false)).json()).readingStatus).toBe("unread");
+    let revision = store.revision();
+    for (const status of ["reading", "read", "unread"] as const) {
+      const response = await post(path, { status });
+      expect(response.status).toBe(200);
+      const updated = await response.json();
+      expect(updated.readingStatus).toBe(status);
+      expect(updated.readingStatusRevision).toBeGreaterThan(revision);
+      expect(updated.updatedAt).toBe(story.updatedAt);
+      const listing = await (await call("/v1/stories", {}, false)).json() as { stories: StoryRecord[]; revision: number };
+      expect(listing.stories.find(s => s.id === story.id)!.readingStatus).toBe(status);
+      expect(listing.stories.find(s => s.id === other.id)!.readingStatus).toBe("unread");
+      expect(listing.revision).toBe(updated.readingStatusRevision);
+      revision = listing.revision;
+      const reopened = new Store(settings.dataDir);
+      try { expect(reopened.getStory(story.id)?.readingStatus).toBe(status); }
+      finally { reopened.close(); }
+      expect((await post(path, { status })).status).toBe(200);
+      expect(store.revision()).toBe(revision);
+    }
+    expect(store.listJobs()).toEqual([]);
+  });
+
+  test("reading status validates input and cannot be reset by a stale worker snapshot", async () => {
+    const { call, post, store } = environment(), story = record();
+    store.saveStory(story);
+    const path = `/v1/stories/${story.id}/reading-status`;
+    for (const value of [{}, { status: "done" }, { status: 1 }, { status: null }, []]) {
+      const revision = store.revision();
+      expect((await post(path, value)).status).toBe(400);
+      expect(store.revision()).toBe(revision);
+    }
+    expect((await post(`/v1/stories/${crypto.randomUUID()}/reading-status`, { status: "read" })).status).toBe(404);
+    const cached = store.getStory(story.id)!;
+    await post(path, { status: "reading" });
+    const readingRevision = store.getStory(story.id)!.readingStatusRevision;
+    cached.audioStatus = "failed";
+    store.saveStory(cached);
+    const refreshed = await (await call(`/v1/stories/${story.id}/status`, {}, false)).json();
+    expect(refreshed.readingStatus).toBe("reading");
+    expect(refreshed.readingStatusRevision).toBe(readingRevision);
+    expect(refreshed.audioStatus).toBe("failed");
+    const raw = store.db.query<{ document: string }, [string]>("SELECT document FROM stories WHERE id=?").get(story.id)!;
+    expect(JSON.parse(raw.document).readingStatus).toBeUndefined();
+    expect((await call(`/v1/stories/${story.id}`, { method: "DELETE" })).status).toBe(204);
+    expect(store.db.query("SELECT * FROM reading_states WHERE story_id=?").get(story.id)).toBeNull();
+    store.saveStory(story);
+    expect(store.getStory(story.id)?.readingStatus).toBe("unread");
   });
 
   test("generation is idempotent across connections and rejects changed payloads", async () => {

@@ -96,7 +96,7 @@ try {
   console.info("HTTP stayed responsive; shutdown and restart preserved queued work and retries");
   if (Bun.which("swiftc")) {
     const binary = join(directory, "ClientContract");
-    await command(["swiftc", "-swift-version", "5", "-module-cache-path", join(directory, "swift-cache"), join(project, "Fablo/Models/StoryContent.swift"), join(project, "Fablo/Services/BackendCache.swift"), join(project, "Fablo/Services/BackendClient.swift"), join(project, "Fablo/Models/Story.swift"), join(project, "Fablo/Models/LibraryEntry.swift"), join(backend, "tests/ClientContract.swift"), "-o", binary]);
+    await command(["swiftc", "-swift-version", "5", "-module-cache-path", join(directory, "swift-cache"), join(project, "Fablo/Models/StoryContent.swift"), join(project, "Fablo/Models/ReadingStatus.swift"), join(project, "Fablo/Services/BackendCache.swift"), join(project, "Fablo/Services/BackendClient.swift"), join(project, "Fablo/Models/Story.swift"), join(project, "Fablo/Models/LibraryEntry.swift"), join(backend, "tests/ClientContract.swift"), "-o", binary]);
     const output = await command([binary], { ...env, FABLO_TEST_URL: base, FABLO_TEST_TOKEN: token, FABLO_TEST_OUTPUT: directory });
     console.info(output.trim());
   }

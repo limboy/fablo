@@ -110,7 +110,7 @@ Queued jobs survive restarts. Running jobs use a renewable lease; if the worker 
 
 The shared library is publicly readable: story listings, details (including cached analyses), status and assets need no token or session. `GET /v1/stories/{id}/analyses/{index}` reads an existing sentence analysis; it returns `404` if none exists and never queues AI work.
 
-All other `/v1` routes require `Authorization: Bearer <FABLO_API_TOKEN>` or a valid session cookie, except session creation, which validates the token in its body. Generation, imports, deletion, media regeneration, analysis generation and job listing/status remain administrator operations. `POST` to an analysis endpoint requires authentication even when the analysis is already cached.
+All other `/v1` routes require `Authorization: Bearer <FABLO_API_TOKEN>` or a valid session cookie, except session creation, which validates the token in its body. Generation, imports, deletion, reading-state updates, media regeneration, analysis generation and job listing/status remain administrator operations. `POST` to an analysis endpoint requires authentication even when the analysis is already cached.
 
 | Method | Path | Result |
 | --- | --- | --- |
@@ -126,6 +126,7 @@ All other `/v1` routes require `Authorization: Bearer <FABLO_API_TOKEN>` or a va
 | GET | `/v1/stories?limit=50&cursor=...` | `{ stories, nextCursor, revision }`; summaries without paragraphs/analyses |
 | GET | `/v1/stories/{id}` | Metadata, `content` and cached `analyses` |
 | GET | `/v1/stories/{id}/status` | Summary including asset states and versions |
+| POST | `/v1/stories/{id}/reading-status` | `{ "status": "unread" \| "reading" \| "read" }` → updated story summary; requires auth |
 | DELETE | `/v1/stories/{id}` | Delete from the shared library and invalidate its jobs |
 | POST | `/v1/stories/{id}/cover` | Queue cover regeneration |
 | POST | `/v1/stories/{id}/audio` | Queue audio regeneration |
@@ -143,6 +144,12 @@ curl -o cover.jpg "https://fablo.example.com/v1/stories/$STORY_ID/assets/cover"
 ```
 
 Browser readers can call these endpoints with ordinary `fetch` requests and no credentials. Public read requests and their `GET`/`HEAD` preflights accept any origin; authenticated browser operations retain the configured origin restrictions. Deploy this backend version and restart the `fablo` PM2 service to enable public reading; no new environment setting is needed. The current iOS connection screen still requires the administrator token for its generation and job-management features.
+
+### Reading boards
+
+Stories start in `unread` (待读); clients can move them to `reading` (在读), `read` (已读), or back to either state. The state belongs to the shared server library, so devices connected to the same server see the same boards after refresh. Story listings, detail and status responses include `readingStatus` and `readingStatusRevision`; the latter increases with successful state changes and protects clients from stale responses. Repeating the current state is a no-op.
+
+Reading state is stored separately in SQLite so cover/audio generation and late story writes cannot overwrite it. Updates advance the library revision for consistent pagination and never enqueue AI jobs. Existing stories default to `unread`; the new table is created automatically on startup. Deploy and restart the backend before using the new iOS menus. The app caches synchronized states for offline viewing and reports failed updates without moving the story to another board.
 
 Generation body:
 

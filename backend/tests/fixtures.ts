@@ -27,7 +27,7 @@ export function config() {
 }
 export function record(id: string = crypto.randomUUID()): StoryRecord {
   const now = new Date().toISOString();
-  return { id, createdAt: now, updatedAt: now, language: "en", level: "A2", genre: "日常生活", generationRequest: { ...request }, content: structuredClone(content), analyses: {}, coverStatus: "missing", audioStatus: "missing", coverVersion: null, audioVersion: null };
+  return { id, createdAt: now, updatedAt: now, language: "en", level: "A2", genre: "日常生活", generationRequest: { ...request }, readingStatus: "unread", readingStatusRevision: 0, content: structuredClone(content), analyses: {}, coverStatus: "missing", audioStatus: "missing", coverVersion: null, audioVersion: null };
 }
 export function wav(): Uint8Array {
   const samples = 22050, data = Buffer.alloc(44 + samples * 2);
