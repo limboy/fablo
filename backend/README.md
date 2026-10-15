@@ -36,6 +36,23 @@ module.exports = { apps: [...yourExistingApps, ...fabloApps] };
 
 Reverse proxy your HTTPS origin to `http://127.0.0.1:3000` (or the configured `HOST`/`PORT`). `PUBLIC_ORIGIN` controls browser-origin checks and secure cookies behind TLS termination. For a separately hosted frontend, add its exact origin to `ALLOWED_ORIGINS`; wildcard origins are unsupported.
 
+The [Nginx example](nginx.conf.example) starts with an HTTP reverse proxy on port 80 so Certbot can configure HTTPS. Replace `fablo.example.com` and the upstream port as needed. The example belongs inside Nginx's `http` context; on a typical Linux VPS using `conf.d`, install it from the `backend` directory:
+
+```sh
+sudo cp nginx.conf.example /etc/nginx/conf.d/fablo.conf
+sudoedit /etc/nginx/conf.d/fablo.conf
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+Once the domain points to your VPS and port 80 is reachable, use [Certbot's Nginx plugin](https://eff-certbot.readthedocs.io/en/stable/using.html#nginx) to obtain and install the certificate and configure HTTPS redirection:
+
+```sh
+sudo certbot --nginx -d fablo.example.com
+```
+
+After HTTPS is enabled, set `PUBLIC_ORIGIN=https://fablo.example.com` and restart Fablo if you changed `.env`. Keep `HOST=127.0.0.1` so Bun listens locally behind Nginx. Authentication headers, cookies and audio byte ranges pass through to the service, and proxy caching is disabled. Proxy settings follow Nginx's [proxy module documentation](https://nginx.org/en/docs/http/ngx_http_proxy_module.html).
+
 ```sh
 curl http://127.0.0.1:3000/health
 pm2 logs fablo
