@@ -181,7 +181,9 @@ private struct LibraryEntryCard: View {
                 VStack(alignment: .leading, spacing: 12) {
                     ForEach(entry.jobs) { job in JobStatusRow(job: job) }
                 }
-                .padding(16)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
+                .padding(.top, entry.story == nil ? 0 : 16)
             }
         }
         .background(Theme.raised)
