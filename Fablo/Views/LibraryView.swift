@@ -124,18 +124,19 @@ struct StoryCard: View {
                 Text(story.titleZh)
                     .font(.subheadline)
                     .foregroundStyle(Theme.muted)
-                if let request = story.generationRequest {
-                    HStack(spacing: 6) {
-                        TagLabel(text: request.length.label)
-                        if !request.topic.isEmpty {
-                            Text(request.topic).font(.caption).foregroundStyle(Theme.muted).lineLimit(2)
-                        }
-                    }
-                    .padding(.top, 4)
+                if let request = story.generationRequest, !request.topic.isEmpty {
+                    Text(request.topic)
+                        .font(.caption)
+                        .foregroundStyle(Theme.muted)
+                        .lineLimit(2)
+                        .padding(.top, 4)
                 }
                 HStack(spacing: 6) {
                     TagLabel(text: "\(story.language.code) · \(story.level)")
                     TagLabel(text: story.genre, systemImage: story.genreSymbol)
+                    if let request = story.generationRequest {
+                        TagLabel(text: request.length.label)
+                    }
                     Spacer()
                     Text(story.createdAt, format: .dateTime.month().day())
                         .font(.caption)
