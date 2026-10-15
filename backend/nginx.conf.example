@@ -8,8 +8,8 @@ server {
     listen 80;
     server_name fablo.example.com;
 
-    # Match the API's 64 KiB JSON request limit.
-    client_max_body_size 64k;
+    # Imports include media; ordinary JSON routes still enforce a 64 KiB limit.
+    client_max_body_size 20m;
 
     location / {
         # No URI suffix: preserve /v1 paths and asset version query parameters.

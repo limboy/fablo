@@ -5,21 +5,24 @@ import { loadConfig, type Config } from "./config";
 import { assetPath } from "./assets";
 import { Store } from "./store";
 import { Worker } from "./worker";
+import { importStory } from "./imports";
+import { IMPORT_BODY_LIMIT, JSON_BODY_LIMIT, readBody } from "./request-body";
 import { APIError, object, parseRequest, sentences, text, uuid, type StoryRecord } from "./types";
 
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 const equals = (a: string, b: string) => timingSafeEqual(Buffer.from(hash(a)), Buffer.from(hash(b)));
 const json = (value: unknown, status = 200) => Response.json(value, { status });
 const summary = (story: StoryRecord) => {
-  const { content, analyses, ...metadata } = story;
+  const { content, analyses, importedFrom, ...metadata } = story;
   return { ...metadata, generationRequest: story.generationRequest ?? null, title: content.title, titleZh: content.titleZh, summaryZh: content.summaryZh, coverPrompt: content.coverPrompt };
 };
-const detail = (story: StoryRecord) => ({ ...summary(story), content: story.content, analyses: story.analyses });
+const detail = (story: StoryRecord) => ({ ...summary(story), content: story.content, analyses: story.analyses, ...(story.importedFrom ? { importedFrom: story.importedFrom } : {}) });
 const sessionCookie = (request: Request): string | null => request.headers.get("cookie")?.split(";").map(v => v.trim()).find(v => v.startsWith("fablo_session="))?.slice("fablo_session=".length) ?? null;
 
 async function body(request: Request): Promise<unknown> {
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) throw new APIError(415, "请使用 application/json");
-  try { return await request.json(); } catch { throw new APIError(400, "JSON 格式无效"); }
+  const data = await readBody(request, JSON_BODY_LIMIT);
+  try { return JSON.parse(new TextDecoder().decode(data)); } catch { throw new APIError(400, "JSON 格式无效"); }
 }
 async function fileResponse(request: Request, path: string, type: string, version: string): Promise<Response> {
   const file = Bun.file(path);
@@ -47,6 +50,7 @@ async function fileResponse(request: Request, path: string, type: string, versio
 }
 
 export function createHandler(config: Config, store: Store) {
+  let activeImports = 0;
   const allowedOrigin = (origin: string, url: URL) => config.origins.includes(origin) || origin === (config.publicOrigin ?? url.origin);
   const requireAuth = (request: Request) => {
     const bearer = request.headers.get("authorization");
@@ -74,6 +78,14 @@ export function createHandler(config: Config, store: Store) {
       return response;
     }
     requireAuth(request);
+    if (path === "/v1/imports" && method === "POST") {
+      if (activeImports >= 2) throw new APIError(503, "导入繁忙，请稍后重试");
+      activeImports++;
+      try {
+        const result = await importStory(request, config, store);
+        return json({ imported: result.imported, story: detail(result.story) }, result.imported ? 201 : 200);
+      } finally { activeImports--; }
+    }
     if (path === "/v1/session" && method === "DELETE") {
       const session = sessionCookie(request);
       if (session) store.deleteSession(hash(config.apiToken + ":" + session));
@@ -173,7 +185,7 @@ if (import.meta.main) {
   const config = loadConfig(), store = new Store(config.dataDir);
   let server: ReturnType<typeof Bun.serve>;
   try {
-    server = Bun.serve({ hostname: config.host, port: config.port, maxRequestBodySize: 64 * 1024, idleTimeout: 30, fetch: createHandler(config, store) });
+    server = Bun.serve({ hostname: config.host, port: config.port, maxRequestBodySize: IMPORT_BODY_LIMIT, idleTimeout: 30, fetch: createHandler(config, store) });
   } catch (error) {
     store.close();
     throw error;

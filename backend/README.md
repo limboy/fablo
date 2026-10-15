@@ -100,7 +100,7 @@ Press Ctrl+C to stop the service, including in `--watch` mode. It logs `service.
 4. The client restores its cached library and downloaded story details immediately, then refreshes the server library and jobs in the background. A successful complete listing removes local copies of deleted stories and their assets.
 5. Sentence analysis is generated on demand and cached by the server and client. Covers, audio and timelines are cached by immutable resource version; an already downloaded audio version plays without a server status request.
 
-The server is authoritative for creation and deletion. There are no import/export endpoints or buttons. The iOS app keeps disposable JSON, image and audio caches under `Caches/FabloServer/v1`, separated by a hash of the server URL and access token. Cached text and analyses survive restarts, covers reuse their downloaded version, and audio is published together with its validated matching timeline. Existing downloaded audio is migrated when reused. Connection credentials stay in Keychain and reading preferences in UserDefaults.
+The server is authoritative for creation and deletion. Existing content can be uploaded through the authenticated administrative import API described below; the app has no import/export buttons. The iOS app keeps disposable JSON, image and audio caches under `Caches/FabloServer/v1`, separated by a hash of the server URL and access token. Cached text and analyses survive restarts, covers reuse their downloaded version, and audio is published together with its validated matching timeline. Existing downloaded audio is migrated when reused. Connection credentials stay in Keychain and reading preferences in UserDefaults.
 
 Cached content remains available if synchronization fails. Confirmed authorization failures clear that connection's cache; confirmed deletions remove the affected story. Downloads that started before invalidation cannot republish deleted cache records. This supports offline access to previously downloaded content; unopened stories or missing resources still require a connection. Cache files can be reclaimed by the system.
 
@@ -115,6 +115,7 @@ All `/v1` routes require `Authorization: Bearer <FABLO_API_TOKEN>` or a valid se
 | GET | `/health` | API liveness, no auth |
 | POST | `/v1/session` | `{ "token": "…" }` → HttpOnly session cookie |
 | DELETE | `/v1/session` | Log out the browser session |
+| POST | `/v1/imports` | Upload existing annotated content and optional media; `201` on creation, `200` for an identical repeat |
 | POST | `/v1/generations` | Generation options → job, `202`; requires `Idempotency-Key` |
 | GET | `/v1/jobs` | `{ jobs: [...] }`, queued/running/failed jobs |
 | GET | `/v1/jobs/{id}` | Job status |
@@ -147,19 +148,69 @@ Story summaries, detail and status responses include `generationRequest` with th
 
 Web clients can submit the token to `/v1/session` and then use `fetch` with `credentials: "include"`. Cookies use HttpOnly and SameSite=Strict, plus Secure when `PUBLIC_ORIGIN` is HTTPS. A same-origin frontend is the simplest deployment; bearer auth also works for an explicitly allowed frontend origin. Do not compile the administrator token into browser assets.
 
+## Import existing content
+
+Deploy the updated backend and restart `fablo` before uploading. Imports use the existing library token and do not call AI providers or enqueue generation jobs. Readable stories and their existing assets are published together, so clients discover them through the normal library refresh.
+
+On an existing Nginx deployment, update `client_max_body_size` in the active Fablo server block to `20m`, then run `sudo nginx -t` and `sudo systemctl reload nginx`. Keep Certbot's existing TLS configuration. The example now permits 20 MiB uploads; ordinary JSON endpoints retain their 64 KiB limit.
+
+`POST /v1/imports` accepts `multipart/form-data` with these fields:
+
+| Field | Format | Limit |
+| --- | --- | --- |
+| `story` | JSON string with `source`, `createdAt`, `generationRequest`, `content`, optional `analyses` | 1 MiB |
+| `cover` | Optional JPEG file | 4 MiB |
+| `audio` | Optional AAC/M4A file | 12 MiB |
+| `timeline` | JSON string, required with audio; schema version 3 | 1 MiB |
+
+The whole request must fit within 20 MiB. The server validates media with FFprobe and checks sentence/word counts and timing bounds before publishing. At most two imports are processed simultaneously. A story without audio remains readable and is not automatically charged for regeneration.
+
+`story.source` contains a stable `format` and `id`, plus optional `metadata` (up to 64 KiB) for original fields. The server derives the story UUID from that source. An identical upload returns the existing story without changing its resource versions; a changed upload for the same source returns `409` and leaves the existing story untouched. Interrupted uploads can be retried safely. Original source metadata is returned as `importedFrom` on story detail, not in library summaries.
+
+### Japanese Short Essays adapter
+
+Preparation runs on your computer, separately from the VPS runtime. It reads each folder's `manifest.json`, `essay.md`, cover and optional `audio.mp3` / `audio.srt`. It never modifies the original collection. Install the optional Python preparation dependencies in a virtual environment:
+
+```sh
+cd backend
+python3 -m venv data/import-venv
+data/import-venv/bin/pip install -r scripts/requirements-import.txt
+data/import-venv/bin/python scripts/prepare-japanese-import.py \
+  "/path/to/Japanese Short Essays" \
+  --output data/japanese-import \
+  --titles /path/to/chinese-titles.json
+```
+
+The optional titles file maps original folder names or Japanese titles to Chinese titles. The adapter preserves Japanese sentences, Chinese translations, original manuscript and metadata; it adds dictionary-based word segmentation, kana readings, romanization and glosses from the original vocabulary tables. Chunk roles are left as `other`; detailed grammar analysis remains available on demand. Mixed N5–N4 entries are catalogued as N4 while retaining the original level in source metadata. Genre and length map to the app's selectors, with original genre and scene retained.
+
+Covers are converted to JPEG and existing MP3 files to AAC/M4A. Sentence boundaries come from the original SRT; word positions inside each sentence are estimated and `isAligned` is `false`. Matching speaker labels are displayed without being timed as spoken words. Missing audio and subtitles are allowed together. The prepared bundle and reports can live in ignored `backend/data`; they are not application source files.
+
+Upload from the local `backend` directory, where Bun reads `FABLO_API_TOKEN` from `.env`:
+
+```sh
+bun run import:upload data/japanese-import --server https://fablo.example.com
+```
+
+The uploader sends one story at a time, retries transient failures, refuses credential-bearing redirects, and saves progress without storing the token. Rerun the same command after interruption; completed stories are recognized by the server.
+
 ## Verify
 
 ```sh
 bun install --frozen-lockfile
 bun run typecheck
 bun test
+python3 tests/prepare-import.test.py
 bun run test:pm2
 # On macOS with Swift installed:
 bun run test:cache
+# With a prepared bundle; uses a disposable local server, no real .env or AI:
+bun --no-env-file run test:import data/japanese-import
 ```
 
 The PM2 smoke test copies the service source and ecosystem file into a temporary directory with a mock `.env`, its own `PM2_HOME`, database and mock AI Gateway. It checks production `.env` loading, the combined service, real FFmpeg output, HTTP responsiveness during generation, graceful shutdown, queued-job recovery and, on macOS with Swift installed, the production Swift API client. It cleans up its own processes and temporary files. It makes no paid AI requests, never loads the real service's `.env` and never talks to the user's existing PM2 daemon.
 
 The native cache smoke test launches a fresh Swift client process for each phase, stops its local mock server to verify offline access, and checks that repeated reads do not download the same asset version again. It also verifies version changes, corrupt cache recovery, credential isolation, authorization invalidation and deletion cleanup. All server data and client caches live in a temporary directory.
+
+The import smoke test uploads the prepared collection twice to a temporary local service and checks that no duplicates or generation jobs appear. On macOS it also runs the production Swift client to paginate the whole library, decode all story details, cache every cover, and open each AAC file with its matching word timeline. It does not upload anything to production.
 
 Bun/PM2 background service concepts follow the [Bun PM2 guide](https://bun.sh/guides/ecosystem/pm2). The ecosystem file uses PM2's [direct executable launch](https://github.com/Unitech/pm2/blob/master/lib/God/ForkMode.js) to preserve Bun's entry point; database access uses [bun:sqlite](https://bun.sh/docs/runtime/sqlite).

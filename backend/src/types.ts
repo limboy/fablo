@@ -24,6 +24,7 @@ export interface StoryRecord {
   content: StoryContent; analyses: Record<string, Analysis>;
   coverStatus: AssetStatus; audioStatus: AssetStatus;
   coverVersion: string | null; audioVersion: string | null;
+  importedFrom?: { format: string; id: string; checksum: string; metadata: Record<string, unknown> };
 }
 export interface Timeline {
   version: number; duration: number; wordStarts: (number | null)[][];
