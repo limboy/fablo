@@ -233,7 +233,13 @@ struct ReaderView: View {
             rateMenu
         }
         .padding(Self.barInset)
-        .glassEffect(.regular, in: .capsule)
+        .background {
+            // Keep the menu's Liquid Glass transition scoped to its own label.
+            Capsule()
+                .fill(.clear)
+                .glassEffect(.regular, in: .capsule)
+                .allowsHitTesting(false)
+        }
         // The whole capsule is the control; otherwise taps fall through to the sentences underneath.
         .contentShape(.capsule)
         .onTapGesture(perform: togglePlayAll)
