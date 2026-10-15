@@ -12,6 +12,7 @@ AI-generated reading practice for Chinese speakers learning English or Japanese.
 - **Sentence analysis** — tap a sentence for an explanation of its structure, grammar points with new examples, key vocabulary (IPA or kana readings) and nuance notes.
 - **Narration** — the whole story is narrated in one pass with word-level highlighting, adjustable speed, pause/resume, looping, and background playback.
 - **Cover art** — each story gets a storybook-style illustration.
+- **Offline reading** — downloaded stories, sentence analyses, covers and narration are cached on device. Cached content opens first while the app syncs with the server in the background.
 
 All explanations are in Simplified Chinese.
 
@@ -26,7 +27,7 @@ The iOS app connects to a Bun backend deployed on your VPS, running the API and 
 | Narration | `google/gemini-3.8-flash-tts` |
 | Word timings for highlighting | `microsoft/mai-transcribe-2` |
 
-Stories, analyses and generation jobs are stored on the server in SQLite; covers, narration and word timings are stored alongside it. Adding a story submits a server job, and the app automatically refreshes the library and downloads the results. The server library is the source of all reading content. The app retains reading preferences and connection settings, plus disposable downloaded audio in its system cache.
+Stories, analyses and generation jobs are stored on the server in SQLite; covers, narration and word timings are stored alongside it. Adding a story submits a server job, and the app automatically refreshes the library and downloads the results. The server library is the source of all reading content. The app persists disposable copies of downloaded content in its system cache, isolated by server and access token. Library and reader views show cached content before refreshing, and known audio versions play from disk without a status request. Successful synchronization updates resource versions and removes deleted stories and their cached assets. Content that has not been downloaded still needs a connection, and the system may reclaim cache files.
 
 ## Project layout
 
@@ -34,7 +35,7 @@ Stories, analyses and generation jobs are stored on the server in SQLite; covers
 Fablo/
   App/        App entry point
   Models/     Observable server records and generated content types
-  Services/   Backend API client, connection credentials, audio downloads and playback
+  Services/   Backend API client, disk cache, connection credentials, audio downloads and playback
   Views/      Library, new story, reader, sentence analysis
 backend/      Bun API, worker, SQLite storage and PM2 configuration
 marketing-video/   Remotion promo video

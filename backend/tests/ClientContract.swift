@@ -6,7 +6,8 @@ struct ClientContract {
     static func main() async throws {
         let environment = ProcessInfo.processInfo.environment
         let connection = try BackendConnection(address: environment["FABLO_TEST_URL"]!, token: environment["FABLO_TEST_TOKEN"]!)
-        let client = BackendClient(connection: connection)
+        let cache = BackendCache(root: URL(fileURLWithPath: environment["FABLO_TEST_OUTPUT"]!).appending(path: "client-cache"))
+        let client = BackendClient(connection: connection, cache: cache)
         let initial = try await client.stories()
         guard let first = initial.first, initial.count == 1 else { fatalError("Expected one server story") }
         let story = try await client.story(first.id)

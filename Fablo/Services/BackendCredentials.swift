@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-/// Only connection settings persist on device; library content comes from the service.
+/// Persists the connection settings; server content has a separate disposable cache.
 actor BackendCredentials {
     static let shared = BackendCredentials()
     private let service = "com.limboy.fablo.backend"

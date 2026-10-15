@@ -53,12 +53,14 @@ struct StoryAudioSource: Sendable {
     let title: String
     let coverData: Data?
     let wordCounts: [Int]
+    var audioVersion: String?
 
     init(story: Story, content: StoryContent) {
         storyID = story.id
         client = story.client
         title = story.title
         coverData = story.coverData
+        audioVersion = story.audioVersion
         wordCounts = content.allSentences.map { $0.sentence.chunks.reduce(0) { $0 + $1.words.count } }
     }
 }
@@ -69,9 +71,25 @@ actor StoryAudioStore {
     private var inFlight: [String: Task<(URL, StoryAudioTimeline), Error>] = [:]
 
     func audio(for source: StoryAudioSource) async throws -> (URL, StoryAudioTimeline) {
-        let key = source.client.connection.baseURL.absoluteString + source.storyID.uuidString
+        let key = BackendCache.namespace(for: source.client.connection) + source.storyID.uuidString + (source.audioVersion ?? "pending")
         if let task = inFlight[key] { return try await task.value }
-        let task = Task { try await Self.download(source) }
+        let task = Task {
+            if let version = source.audioVersion { return try await Self.download(source, version: version) }
+            // Only pending audio needs a status request. Once known, share the
+            // version-specific download with callers whose metadata is newer.
+            for _ in 0..<900 {
+                try Task.checkCancellation()
+                let record = try await source.client.story(source.storyID, statusOnly: true)
+                if let version = record.audioVersion {
+                    var resolved = source
+                    resolved.audioVersion = version
+                    return try await self.audio(for: resolved)
+                }
+                if record.audioStatus == "failed" { throw BackendError.message("音频生成失败，请在书库中重新生成音频") }
+                try await Task.sleep(for: .seconds(2))
+            }
+            throw BackendError.message("音频仍在服务端处理，请稍后重试")
+        }
         inFlight[key] = task
         defer { inFlight[key] = nil }
         return try await task.value
@@ -81,43 +99,44 @@ actor StoryAudioStore {
         Task { _ = try? await audio(for: source) }
     }
 
-    private static func download(_ source: StoryAudioSource) async throws -> (URL, StoryAudioTimeline) {
-        var version: String?
-        for _ in 0..<900 {
-            try Task.checkCancellation()
-            let record = try await source.client.story(source.storyID, statusOnly: true)
-            if let ready = record.audioVersion { version = ready; break }
-            if record.audioStatus == "failed" {
-                throw BackendError.message("音频生成失败，请在书库中重新生成音频")
-            }
-            try await Task.sleep(for: .seconds(2))
-        }
-        guard let version, UUID(uuidString: version) != nil else {
-            throw BackendError.message("音频仍在服务端处理，请稍后重试")
-        }
-        let namespace = SHA256.hash(data: Data(source.client.connection.baseURL.absoluteString.utf8))
-            .map { String(format: "%02x", $0) }.joined()
-        let directory = URL.cachesDirectory.appending(path: "ServerAudio/\(namespace)/\(source.storyID.uuidString)/\(version)", directoryHint: .isDirectory)
-        let audioURL = directory.appending(path: "audio.m4a")
-        let timelineURL = directory.appending(path: "timeline.json")
-        if FileManager.default.fileExists(atPath: audioURL.path),
-           let data = try? Data(contentsOf: timelineURL),
-           let timeline = try? JSONDecoder().decode(StoryAudioTimeline.self, from: data),
-           (try? validate(timeline, wordCounts: source.wordCounts)) != nil {
-            return (audioURL, timeline)
-        }
-        let staging = directory.deletingLastPathComponent().appending(path: ".download-\(UUID().uuidString)", directoryHint: .isDirectory)
+    private static func download(_ source: StoryAudioSource, version: String) async throws -> (URL, StoryAudioTimeline) {
+        let cache = source.client.cache, connection = source.client.connection
+        guard let directory = cache.audioDirectory(source.storyID, version: version, for: connection) else { throw BackendError.message("音频版本无效") }
+        if let cached = readAudio(in: directory, wordCounts: source.wordCounts) { return cached }
+        let generation = await cache.generation(for: connection)
+        let staging = cache.directory(for: connection).appending(path: ".staging/\(UUID().uuidString)", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: staging) }
+        // Reuse audio downloaded by versions of the app before the unified cache.
+        let legacyNamespace = SHA256.hash(data: Data(connection.baseURL.absoluteString.utf8)).map { String(format: "%02x", $0) }.joined()
+        let legacy = URL.cachesDirectory.appending(path: "ServerAudio/\(legacyNamespace)/\(source.storyID.uuidString)/\(version)", directoryHint: .isDirectory)
+        if let (_, timeline) = readAudio(in: legacy, wordCounts: source.wordCounts) {
+            try FileManager.default.copyItem(at: legacy.appending(path: "audio.m4a"), to: staging.appending(path: "audio.m4a"))
+            try FileManager.default.copyItem(at: legacy.appending(path: "timeline.json"), to: staging.appending(path: "timeline.json"))
+            let audioURL = try await cache.publishAudio(from: staging, id: source.storyID, version: version, for: connection, generation: generation)
+            try? FileManager.default.removeItem(at: legacy)
+            return (audioURL, timeline)
+        }
+        // A missing or invalid pair must be rebuilt, including a corrupt timeline.
+        await cache.removeAsset("timeline", id: source.storyID, version: version, for: connection)
         async let download: Void = source.client.downloadAudio(storyID: source.storyID, version: version, to: staging.appending(path: "audio.m4a"))
         let data = try await source.client.asset("timeline", storyID: source.storyID, version: version)
         let timeline = try JSONDecoder().decode(StoryAudioTimeline.self, from: data)
         try validate(timeline, wordCounts: source.wordCounts)
         try data.write(to: staging.appending(path: "timeline.json"), options: .atomic)
         try await download
-        if FileManager.default.fileExists(atPath: directory.path) { try FileManager.default.removeItem(at: directory) }
-        try FileManager.default.moveItem(at: staging, to: directory)
+        let audioURL = try await cache.publishAudio(from: staging, id: source.storyID, version: version, for: connection, generation: generation)
         return (audioURL, timeline)
+    }
+
+    private static func readAudio(in directory: URL, wordCounts: [Int]) -> (URL, StoryAudioTimeline)? {
+        let audio = directory.appending(path: "audio.m4a")
+        guard let attributes = try? FileManager.default.attributesOfItem(atPath: audio.path),
+              let size = attributes[.size] as? NSNumber, size.intValue > 0,
+              let data = try? Data(contentsOf: directory.appending(path: "timeline.json")),
+              let timeline = try? JSONDecoder().decode(StoryAudioTimeline.self, from: data),
+              (try? validate(timeline, wordCounts: wordCounts)) != nil else { return nil }
+        return (audio, timeline)
     }
 
     private static func validate(_ timeline: StoryAudioTimeline, wordCounts: [Int]) throws {

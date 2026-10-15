@@ -7,6 +7,7 @@
     "start": "bun src/server.ts",
     "test": "bun test",
     "test:pm2": "bun tests/smoke-pm2.ts",
+    "test:cache": "bun tests/smoke-cache.ts",
     "typecheck": "tsc --noEmit"
   },
   "engines": { "bun": ">=1.3.0" },

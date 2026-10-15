@@ -29,7 +29,7 @@ struct LibraryView: View {
 
                     if let error = studio.errorMessage {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text(error).font(.callout).foregroundStyle(.red)
+                            Text(error).font(.callout).foregroundStyle(studio.isShowingCachedLibrary ? Theme.muted : .red)
                             Button("重试") { Task { await studio.refresh() } }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -77,6 +77,10 @@ struct LibraryView: View {
             .sheet(isPresented: $showingBackendSettings) { BackendSettingsView() }
             .task(id: scenePhase) {
                 if scenePhase == .active { await studio.observe() }
+            }
+            .onChange(of: studio.connectionID) { _, _ in
+                player.stop()
+                path = []
             }
             .onChange(of: stories.map(\.id)) { _, ids in
                 if let current = path.last, !ids.contains(current.id) {

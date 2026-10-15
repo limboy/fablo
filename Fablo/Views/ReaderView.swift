@@ -124,15 +124,33 @@ struct ReaderView: View {
     // MARK: Sentences
 
     private func load() async {
-        isLoading = true
         errorMessage = nil
         defer { isLoading = false }
+        content = story.decodedContent()
+        isLoading = content == nil
+        if content == nil, let cached = await story.client.cachedStory(story.id) {
+            guard !Task.isCancelled else { return }
+            story.restoreCachedDetails(cached)
+            content = story.decodedContent()
+            isLoading = content == nil
+        }
+        if let content { StoryAudioStore.shared.prepare(StoryAudioSource(story: story, content: content)) }
         do {
-            story.apply(try await story.client.story(story.id))
+            let record = try await story.client.story(story.id)
+            guard !Task.isCancelled else { return }
+            story.apply(record)
             content = story.decodedContent()
             if let content { StoryAudioStore.shared.prepare(StoryAudioSource(story: story, content: content)) }
         } catch {
-            if !Task.isCancelled { errorMessage = error.localizedDescription }
+            guard !Task.isCancelled, !(error is CancellationError) else { return }
+            if case BackendError.http(404, _) = error {
+                content = nil
+                studio.removeMissingStory(story.id)
+            } else if (error as? BackendError)?.invalidatesConnection == true {
+                content = nil
+                studio.rejectConnection(error)
+            }
+            if content == nil { errorMessage = error.localizedDescription }
         }
     }
 

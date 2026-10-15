@@ -65,7 +65,7 @@ struct BackendSettingsView: View {
             _ = try await BackendClient(connection: connection).jobs()
             try await BackendCredentials.shared.save(connection)
             player.stop()
-            studio.connect(connection)
+            await studio.connect(connection)
             await studio.refresh()
             dismiss()
         } catch { errorMessage = error.localizedDescription }

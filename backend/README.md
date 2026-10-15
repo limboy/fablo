@@ -97,10 +97,12 @@ Press Ctrl+C to stop the service, including in `--watch` mode. It logs `service.
 1. The client sends generation options to `POST /v1/generations` with a fresh `Idempotency-Key`.
 2. The server immediately returns `202` and a job. Reusing the same key and payload returns that job; changing the payload with the same key returns `409`.
 3. The worker generates and commits the annotated story, then queues independent cover and audio jobs. The story becomes readable before those assets finish.
-4. The client refreshes the server library and jobs. Relaunching a client picks up the same records and pending jobs; no local short story database is used.
-5. Sentence analysis is generated on demand and cached by the server. Audio and its timeline are downloaded using the same immutable asset version.
+4. The client restores its cached library and downloaded story details immediately, then refreshes the server library and jobs in the background. A successful complete listing removes local copies of deleted stories and their assets.
+5. Sentence analysis is generated on demand and cached by the server and client. Covers, audio and timelines are cached by immutable resource version; an already downloaded audio version plays without a server status request.
 
-The server is authoritative for creation and deletion. There are no import/export endpoints or buttons. The iOS app keeps downloaded data in memory and stores disposable audio files in the system cache, plus connection credentials in Keychain and reading preferences in UserDefaults.
+The server is authoritative for creation and deletion. There are no import/export endpoints or buttons. The iOS app keeps disposable JSON, image and audio caches under `Caches/FabloServer/v1`, separated by a hash of the server URL and access token. Cached text and analyses survive restarts, covers reuse their downloaded version, and audio is published together with its validated matching timeline. Existing downloaded audio is migrated when reused. Connection credentials stay in Keychain and reading preferences in UserDefaults.
+
+Cached content remains available if synchronization fails. Confirmed authorization failures clear that connection's cache; confirmed deletions remove the affected story. Downloads that started before invalidation cannot republish deleted cache records. This supports offline access to previously downloaded content; unopened stories or missing resources still require a connection. Cache files can be reclaimed by the system.
 
 Queued jobs survive restarts. Running jobs use a renewable lease; if the worker is interrupted, an expired job becomes failed and the client can explicitly retry it. This avoids silently repeating a paid upstream request with an uncertain outcome. A committed story is reused when retrying its generation job. Media failures and analysis failures do not remove the text. Queue capacity and daily task limits are configurable; they are task limits rather than billing guarantees.
 
@@ -152,8 +154,12 @@ bun install --frozen-lockfile
 bun run typecheck
 bun test
 bun run test:pm2
+# On macOS with Swift installed:
+bun run test:cache
 ```
 
 The PM2 smoke test copies the service source and ecosystem file into a temporary directory with a mock `.env`, its own `PM2_HOME`, database and mock AI Gateway. It checks production `.env` loading, the combined service, real FFmpeg output, HTTP responsiveness during generation, graceful shutdown, queued-job recovery and, on macOS with Swift installed, the production Swift API client. It cleans up its own processes and temporary files. It makes no paid AI requests, never loads the real service's `.env` and never talks to the user's existing PM2 daemon.
+
+The native cache smoke test launches a fresh Swift client process for each phase, stops its local mock server to verify offline access, and checks that repeated reads do not download the same asset version again. It also verifies version changes, corrupt cache recovery, credential isolation, authorization invalidation and deletion cleanup. All server data and client caches live in a temporary directory.
 
 Bun/PM2 background service concepts follow the [Bun PM2 guide](https://bun.sh/guides/ecosystem/pm2). The ecosystem file uses PM2's [direct executable launch](https://github.com/Unitech/pm2/blob/master/lib/God/ForkMode.js) to preserve Bun's entry point; database access uses [bun:sqlite](https://bun.sh/docs/runtime/sqlite).

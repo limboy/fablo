@@ -1,12 +1,13 @@
 import Foundation
 import Observation
 
-/// An in-memory view of a server record, never created or persisted by the client.
+/// A view of a server record, hydrated from disposable local copies when available.
 @Observable
 final class Story: Identifiable, Hashable {
     let id: UUID
     let client: BackendClient
     private(set) var createdAt: Date
+    private(set) var updatedAt: String
     private(set) var language: StoryLanguage
     private(set) var level: String
     private(set) var genre: String
@@ -26,6 +27,7 @@ final class Story: Identifiable, Hashable {
         id = record.id
         self.client = client
         createdAt = Self.date(record.createdAt)
+        updatedAt = record.updatedAt
         language = record.language
         level = record.level
         genre = record.genre
@@ -42,7 +44,9 @@ final class Story: Identifiable, Hashable {
     }
 
     func apply(_ record: BackendStory) {
+        guard record.updatedAt >= updatedAt else { restoreCachedDetails(record); return }
         createdAt = Self.date(record.createdAt)
+        updatedAt = record.updatedAt
         language = record.language
         level = record.level
         genre = record.genre
@@ -57,6 +61,12 @@ final class Story: Identifiable, Hashable {
         audioVersion = record.audioVersion
         if let content = record.content { self.content = content }
         if let analyses = record.analyses { self.analyses = analyses }
+    }
+
+    func restoreCachedDetails(_ record: BackendStory) {
+        guard record.id == id else { return }
+        if content == nil { content = record.content }
+        analyses.merge(record.analyses ?? [:]) { current, _ in current }
     }
 
     var coverFailed: Bool { coverStatus == "failed" }
