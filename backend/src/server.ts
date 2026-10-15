@@ -18,6 +18,11 @@ const summary = (story: StoryRecord) => {
 };
 const detail = (story: StoryRecord) => ({ ...summary(story), content: story.content, analyses: story.analyses, ...(story.importedFrom ? { importedFrom: story.importedFrom } : {}) });
 const sessionCookie = (request: Request): string | null => request.headers.get("cookie")?.split(";").map(v => v.trim()).find(v => v.startsWith("fablo_session="))?.slice("fablo_session=".length) ?? null;
+const routePath = (url: URL) => url.pathname.replace(/\/$/, "") || "/";
+const isPublicRead = (path: string, method: string) => {
+  if (method === "GET") return path === "/v1/stories" || /^\/v1\/stories\/[^/]+(?:\/(?:status|analyses\/\d+|assets\/(?:cover|audio|timeline)))?$/.test(path);
+  return method === "HEAD" && /^\/v1\/stories\/[^/]+\/assets\/(?:cover|audio|timeline)$/.test(path);
+};
 
 async function body(request: Request): Promise<unknown> {
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) throw new APIError(415, "请使用 application/json");
@@ -27,7 +32,7 @@ async function body(request: Request): Promise<unknown> {
 async function fileResponse(request: Request, path: string, type: string, version: string): Promise<Response> {
   const file = Bun.file(path);
   if (!await file.exists()) throw new APIError(404, "资源文件不存在");
-  const headers = new Headers({ "Content-Type": type, "Cache-Control": "private, no-cache", ETag: `"${version}"`, "Accept-Ranges": "bytes" });
+  const headers = new Headers({ "Content-Type": type, "Cache-Control": "public, no-cache", ETag: `"${version}"`, "Accept-Ranges": "bytes" });
   if (request.headers.get("if-none-match") === headers.get("etag")) return new Response(null, { status: 304, headers });
   const range = request.headers.get("range");
   if (range && (!request.headers.has("if-range") || request.headers.get("if-range") === headers.get("etag"))) {
@@ -65,7 +70,7 @@ export function createHandler(config: Config, store: Store) {
     return story;
   };
   async function route(request: Request, url: URL): Promise<Response> {
-    const path = url.pathname.replace(/\/$/, "") || "/", method = request.method;
+    const path = routePath(url), method = request.method;
     if (path === "/health" && method === "GET") return json({ status: "ok" });
     if (path === "/v1/session" && method === "POST") {
       const token = text(object(await body(request)).token, "token", 512, false);
@@ -77,7 +82,7 @@ export function createHandler(config: Config, store: Store) {
       response.headers.set("Set-Cookie", `fablo_session=${session}; HttpOnly; SameSite=Strict; Path=/v1; Max-Age=604800${secure ? "; Secure" : ""}`);
       return response;
     }
-    requireAuth(request);
+    if (!isPublicRead(path, method)) requireAuth(request);
     if (path === "/v1/imports" && method === "POST") {
       if (activeImports >= 2) throw new APIError(503, "导入繁忙，请稍后重试");
       activeImports++;
@@ -148,10 +153,14 @@ export function createHandler(config: Config, store: Store) {
         return fileResponse(request, file, { cover: "image/jpeg", audio: "audio/mp4", timeline: "application/json" }[name], version!);
       }
       const analysis = /^analyses\/(\d+)$/.exec(action ?? "");
-      if (analysis && method === "POST") {
+      if (analysis && (method === "GET" || method === "POST")) {
         const index = Number(analysis[1]);
         if (!Number.isSafeInteger(index) || index >= sentences(story.content).length) throw new APIError(400, "句子编号超出范围");
         const cached = story.analyses[String(index)];
+        if (method === "GET") {
+          if (!cached) throw new APIError(404, "句子解析尚未生成");
+          return json({ analysis: cached });
+        }
         return cached ? json({ analysis: cached }) : json({ job: store.enqueue("analysis", id, { index }, undefined, config) }, 202);
       }
     }
@@ -159,9 +168,11 @@ export function createHandler(config: Config, store: Store) {
   }
   return async (request: Request): Promise<Response> => {
     const url = new URL(request.url), origin = request.headers.get("origin");
+    const trustedOrigin = origin !== null && allowedOrigin(origin, url);
+    const publicRead = isPublicRead(routePath(url), request.method === "OPTIONS" ? request.headers.get("access-control-request-method") ?? "" : request.method);
     let response: Response;
     try {
-      if (origin && !allowedOrigin(origin, url)) throw new APIError(403, "不允许的网页来源");
+      if (origin && !trustedOrigin && !publicRead) throw new APIError(403, "不允许的网页来源");
       response = request.method === "OPTIONS" ? new Response(null, { status: 204 }) : await route(request, url);
     } catch (error) {
       if (!(error instanceof APIError)) console.error(JSON.stringify({ event: "request.failed", errorType: error instanceof Error ? error.name : "unknown" }));
@@ -169,11 +180,11 @@ export function createHandler(config: Config, store: Store) {
     }
     response.headers.set("X-Content-Type-Options", "nosniff");
     if (!response.headers.has("Cache-Control")) response.headers.set("Cache-Control", "no-store");
-    if (origin && allowedOrigin(origin, url)) {
+    response.headers.set("Vary", request.method === "OPTIONS" ? "Origin, Access-Control-Request-Method" : "Origin");
+    if (origin && (trustedOrigin || publicRead)) {
       response.headers.set("Access-Control-Allow-Origin", origin);
-      response.headers.set("Access-Control-Allow-Credentials", "true");
-      response.headers.set("Vary", "Origin");
-      response.headers.set("Access-Control-Allow-Methods", "GET,HEAD,POST,DELETE,OPTIONS");
+      if (trustedOrigin) response.headers.set("Access-Control-Allow-Credentials", "true");
+      response.headers.set("Access-Control-Allow-Methods", trustedOrigin ? "GET,HEAD,POST,DELETE,OPTIONS" : "GET,HEAD,OPTIONS");
       response.headers.set("Access-Control-Allow-Headers", "Authorization,Content-Type,Idempotency-Key,Range,If-None-Match,If-Range");
       response.headers.set("Access-Control-Expose-Headers", "ETag,Content-Range,Accept-Ranges");
     }

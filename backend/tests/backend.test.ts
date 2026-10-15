@@ -44,19 +44,87 @@ describe("API and persistent jobs", () => {
     expect(store.getStory(story.id)?.analyses["1"]).toEqual(analysis);
   });
 
-  test("requires auth, validates browser origins, and supports private cookie sessions", async () => {
+  test("requires auth for administration, validates browser origins, and supports private cookie sessions", async () => {
     const { call, settings } = environment();
     expect((await call("/health", {}, false)).status).toBe(200);
-    expect((await call("/v1/stories", {}, false)).status).toBe(401);
-    expect((await call("/v1/stories", { headers: { Origin: "https://evil.example" } })).status).toBe(403);
-    const cors = await call("/v1/stories", { headers: { Origin: "https://web.example.com" } });
+    expect((await call("/v1/jobs", {}, false)).status).toBe(401);
+    expect((await call("/v1/jobs", { headers: { Origin: "https://evil.example" } })).status).toBe(403);
+    const cors = await call("/v1/jobs", { headers: { Origin: "https://web.example.com" } });
     expect(cors.headers.get("access-control-allow-origin")).toBe("https://web.example.com");
     const login = await call("/v1/session", { method: "POST", headers: { "Content-Type": "application/json", Origin: "https://fablo.example.com" }, body: JSON.stringify({ token: settings.apiToken }) }, false);
     const cookie = login.headers.get("set-cookie")!;
     expect(cookie).toContain("HttpOnly"); expect(cookie).toContain("Secure"); expect(cookie).toContain("SameSite=Strict");
-    expect((await call("/v1/stories", { headers: { Cookie: cookie.split(";")[0]! } }, false)).status).toBe(200);
+    expect((await call("/v1/jobs", { headers: { Cookie: cookie.split(";")[0]! } }, false)).status).toBe(200);
     expect((await call("/v1/session", { method: "DELETE", headers: { Cookie: cookie.split(";")[0]! } }, false)).status).toBe(204);
-    expect((await call("/v1/stories", { headers: { Cookie: cookie.split(";")[0]! } }, false)).status).toBe(401);
+    expect((await call("/v1/jobs", { headers: { Cookie: cookie.split(";")[0]! } }, false)).status).toBe(401);
+  });
+
+  test("public readers can list stories, read content and fetch existing analyses without creating jobs", async () => {
+    const { call, store } = environment(), story = record();
+    story.analyses["0"] = analysis;
+    store.saveStory(story);
+    const revision = store.revision();
+    const listing = await (await call("/v1/stories/", {}, false)).json();
+    expect(listing.stories).toHaveLength(1);
+    expect(listing.stories[0].id).toBe(story.id);
+    expect(listing.stories[0].content).toBeUndefined();
+    const base = `/v1/stories/${story.id}`;
+    const detail = await (await call(base, {}, false)).json();
+    expect(detail.content).toEqual(content);
+    expect(detail.analyses).toEqual({ "0": analysis });
+    expect((await (await call(`${base}/status`, {}, false)).json()).id).toBe(story.id);
+    expect(await (await call(`${base}/analyses/0`, {}, false)).json()).toEqual({ analysis });
+    expect((await call(`${base}/analyses/1`, {}, false)).status).toBe(404);
+    expect((await call(`${base}/analyses/100`, {}, false)).status).toBe(400);
+    expect((await call(`/v1/stories/${crypto.randomUUID()}`, {}, false)).status).toBe(404);
+    expect((await call("/v1/stories/not-a-uuid", {}, false)).status).toBe(400);
+    expect(store.revision()).toBe(revision);
+    expect(store.listJobs()).toEqual([]);
+  });
+
+  test("public reading never authorizes writes or access to administrative jobs", async () => {
+    const { call, store } = environment(), story = record();
+    story.analyses["0"] = analysis;
+    store.saveStory(story);
+    const job = store.enqueue("analysis", story.id, { index: 1 });
+    const protectedRoutes = [
+      ["POST", "/v1/imports"], ["POST", "/v1/generations"], ["DELETE", "/v1/session"],
+      ["GET", "/v1/jobs"], ["GET", `/v1/jobs/${job.id}`],
+      ["POST", `/v1/jobs/${job.id}/retry`], ["DELETE", `/v1/jobs/${job.id}`],
+      ["DELETE", `/v1/stories/${story.id}`],
+      ...["cover", "audio", "analyses/0", "analyses/1", "assets/cover"].map(action => ["POST", `/v1/stories/${story.id}/${action}`]),
+    ];
+    for (const [method, path] of protectedRoutes) {
+      expect((await call(path!, { method }, false)).status).toBe(401);
+      expect((await call(path!, { method, headers: { Authorization: "Bearer invalid" } }, false)).status).toBe(401);
+    }
+    expect(store.getStory(story.id)).toEqual(story);
+    expect(store.listJobs()).toEqual([job]);
+  });
+
+  test("any browser origin can read public content while administrative CORS remains restricted", async () => {
+    const { call } = environment(), origin = "https://reader.example.net";
+    const response = await call("/v1/stories", { headers: { Origin: origin } }, false);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("access-control-allow-origin")).toBe(origin);
+    expect(response.headers.get("access-control-allow-credentials")).toBeNull();
+    expect(response.headers.get("access-control-allow-methods")).toBe("GET,HEAD,OPTIONS");
+    expect(response.headers.get("vary")).toBe("Origin");
+    const trusted = await call("/v1/stories", { headers: { Origin: "https://web.example.com" } }, false);
+    expect(trusted.headers.get("access-control-allow-credentials")).toBe("true");
+    const preflight = await call("/v1/stories/", { method: "OPTIONS", headers: { Origin: origin, "Access-Control-Request-Method": "GET" } }, false);
+    expect(preflight.status).toBe(204);
+    expect(preflight.headers.get("access-control-allow-origin")).toBe(origin);
+    expect(preflight.headers.get("vary")).toContain("Access-Control-Request-Method");
+    const missing = await call(`/v1/stories/${crypto.randomUUID()}`, { headers: { Origin: origin } }, false);
+    expect(missing.status).toBe(404);
+    expect(missing.headers.get("access-control-allow-origin")).toBe(origin);
+    for (const [method, path] of [["DELETE", "/v1/stories"], ["POST", `/v1/stories/${crypto.randomUUID()}/analyses/0`], ["GET", "/v1/jobs"]]) {
+      const blocked = await call(path!, { method: "OPTIONS", headers: { Origin: origin, "Access-Control-Request-Method": method! } }, false);
+      expect(blocked.status).toBe(403);
+      expect(blocked.headers.get("access-control-allow-origin")).toBeNull();
+    }
+    expect((await call("/v1/generations", { method: "POST", headers: { Origin: origin, "Access-Control-Request-Method": "GET" } })).status).toBe(403);
   });
 
   test("generation is idempotent across connections and rejects changed payloads", async () => {
@@ -141,12 +209,12 @@ describe("API and persistent jobs", () => {
     const { store, call } = environment();
     const date = new Date().toISOString();
     for (let i = 0; i < 3; i++) { const s = record(); s.createdAt = date; store.saveStory(s); }
-    const first = await (await call("/v1/stories?limit=2")).json();
-    const next = await (await call(`/v1/stories?limit=2&cursor=${first.nextCursor}`)).json();
+    const first = await (await call("/v1/stories?limit=2", {}, false)).json();
+    const next = await (await call(`/v1/stories?limit=2&cursor=${first.nextCursor}`, {}, false)).json();
     expect(new Set([...first.stories, ...next.stories].map(s => s.id)).size).toBe(3);
     expect(next.nextCursor).toBeNull();
-    expect((await call("/v1/stories?cursor=invalid")).status).toBe(400);
-    expect((await call("/v1/stories?limit=10000")).status).toBe(400);
+    expect((await call("/v1/stories?cursor=invalid", {}, false)).status).toBe(400);
+    expect((await call("/v1/stories?limit=10000", {}, false)).status).toBe(400);
   });
 
   test("deleting a story fences an analysis already running on the worker", async () => {
@@ -166,22 +234,33 @@ describe("API and persistent jobs", () => {
     expect((await call(`/v1/stories/${story.id}`)).status).toBe(404);
   });
 
-  test("resource downloads are private, support ranges and pin matching asset versions", async () => {
+  test("public resource downloads support ranges, HEAD, conditional requests and pinned asset versions", async () => {
     const { store, call, settings } = environment(), story = record();
-    const version = await publishAssets(settings.dataDir, story.id, { "audio.m4a": Buffer.from("0123456789"), "timeline.json": "{}" });
+    const version = await publishAssets(settings.dataDir, story.id, { "cover.jpg": "cover", "audio.m4a": Buffer.from("0123456789"), "timeline.json": "{}" });
+    story.coverVersion = version; story.coverStatus = "ready";
     story.audioVersion = version; story.audioStatus = "ready"; store.saveStory(story);
     const path = `/v1/stories/${story.id}/assets/audio?version=${version}`;
-    expect((await call(path, {}, false)).status).toBe(401);
-    const range = await call(path, { headers: { Range: "bytes=2-5" } });
+    expect((await call(path, {}, false)).status).toBe(200);
+    for (const [name, type, expected] of [["cover", "image/jpeg", "cover"], ["timeline", "application/json", "{}"]]) {
+      const resource = await call(`/v1/stories/${story.id}/assets/${name}`, {}, false);
+      expect(resource.headers.get("content-type")).toBe(type!);
+      expect(await resource.text()).toBe(expected!);
+    }
+    const range = await call(path, { headers: { Range: "bytes=2-5", Origin: "https://reader.example.net" } }, false);
     expect(range.status).toBe(206); expect(await range.text()).toBe("2345");
     expect(range.headers.get("content-range")).toBe("bytes 2-5/10");
-    expect((await call(path, { headers: { "If-None-Match": `"${version}"` } })).status).toBe(304);
-    expect((await call(path, { headers: { Range: "bytes=99-" } })).status).toBe(416);
-    expect((await call(path, { method: "HEAD" })).headers.get("content-length")).toBe("10");
+    expect(range.headers.get("access-control-allow-origin")).toBe("https://reader.example.net");
+    expect(range.headers.get("cache-control")).toBe("public, no-cache");
+    expect((await call(path, { headers: { "If-None-Match": `"${version}"` } }, false)).status).toBe(304);
+    expect((await call(path, { headers: { Range: "bytes=99-" } }, false)).status).toBe(416);
+    const head = await call(path, { method: "HEAD", headers: { Origin: "https://reader.example.net" } }, false);
+    expect(head.status).toBe(200);
+    expect(head.headers.get("content-length")).toBe("10");
+    expect(await head.text()).toBe("");
     const newVersion = await publishAssets(settings.dataDir, story.id, { "audio.m4a": "new" });
     store.assetStatus(story.id, "audio", "ready", newVersion);
-    expect(await (await call(path)).text()).toBe("0123456789");
-    expect((await call(`/v1/stories/${story.id}/assets/audio?version=../secret`)).status).toBe(400);
+    expect(await (await call(path, {}, false)).text()).toBe("0123456789");
+    expect((await call(`/v1/stories/${story.id}/assets/audio?version=../secret`, {}, false)).status).toBe(400);
   });
 });
 

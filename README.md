@@ -53,7 +53,7 @@ Requirements: Xcode with the iOS 26 SDK, and the [Bun backend](backend/README.md
    open Fablo.xcodeproj
    ```
 
-3. Tap **连接服务** in the app and enter your HTTPS backend address and access token. The token is saved in Keychain. Tap **+** to generate a story on the server; it appears automatically when the text is ready. The same API is available for a future web client.
+3. Tap **连接服务** in the app and enter your HTTPS backend address and access token. The token is saved in Keychain. Tap **+** to generate a story on the server; it appears automatically when the text is ready. The server also provides [public reading endpoints](backend/README.md#rest-api) for web clients: stories, cached analyses and media can be read without a token; management and AI generation require authentication.
 
 For on-device builds, change `DEVELOPMENT_TEAM` in `project.yml` (or in Xcode's Signing settings) to your own team. For local simulator development, start the backend with `bun run dev` from `backend/` and connect to `http://localhost:3000`.
 

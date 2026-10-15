@@ -1,6 +1,6 @@
 # Fablo backend
 
-Bun + TypeScript, running the HTTP API and background queue runner in one PM2 process named `fablo`. SQLite stores the shared library, cached analyses and durable jobs. Images, AAC narration and word timings live in `DATA_DIR/assets`. The iOS app and future web clients use the same authenticated REST API.
+Bun + TypeScript, running the HTTP API and background queue runner in one PM2 process named `fablo`. SQLite stores the shared library, cached analyses and durable jobs. Images, AAC narration and word timings live in `DATA_DIR/assets`. The REST API provides public reading access and authenticated library management.
 
 ## Deploy on your VPS
 
@@ -34,7 +34,7 @@ const { apps: fabloApps } = require("/absolute/path/to/fablo/backend/ecosystem.c
 module.exports = { apps: [...yourExistingApps, ...fabloApps] };
 ```
 
-Reverse proxy your HTTPS origin to `http://127.0.0.1:3000` (or the configured `HOST`/`PORT`). `PUBLIC_ORIGIN` controls browser-origin checks and secure cookies behind TLS termination. For a separately hosted frontend, add its exact origin to `ALLOWED_ORIGINS`; wildcard origins are unsupported.
+Reverse proxy your HTTPS origin to `http://127.0.0.1:3000` (or the configured `HOST`/`PORT`). `PUBLIC_ORIGIN` controls browser-origin checks and secure cookies behind TLS termination. Public reading works from any browser origin without credentials. For a separately hosted frontend that needs authenticated management, add its exact origin to `ALLOWED_ORIGINS`; wildcard configuration entries are unsupported.
 
 The [Nginx example](nginx.conf.example) starts with an HTTP reverse proxy on port 80 so Certbot can configure HTTPS. Replace `fablo.example.com` and the upstream port as needed. The example belongs inside Nginx's `http` context; on a typical Linux VPS using `conf.d`, install it from the `backend` directory:
 
@@ -108,7 +108,9 @@ Queued jobs survive restarts. Running jobs use a renewable lease; if the worker 
 
 ## REST API
 
-All `/v1` routes require `Authorization: Bearer <FABLO_API_TOKEN>` or a valid session cookie, except session creation. This first version serves one private shared library, with one administrator token.
+The shared library is publicly readable: story listings, details (including cached analyses), status and assets need no token or session. `GET /v1/stories/{id}/analyses/{index}` reads an existing sentence analysis; it returns `404` if none exists and never queues AI work.
+
+All other `/v1` routes require `Authorization: Bearer <FABLO_API_TOKEN>` or a valid session cookie, except session creation, which validates the token in its body. Generation, imports, deletion, media regeneration, analysis generation and job listing/status remain administrator operations. `POST` to an analysis endpoint requires authentication even when the analysis is already cached.
 
 | Method | Path | Result |
 | --- | --- | --- |
@@ -127,8 +129,20 @@ All `/v1` routes require `Authorization: Bearer <FABLO_API_TOKEN>` or a valid se
 | DELETE | `/v1/stories/{id}` | Delete from the shared library and invalidate its jobs |
 | POST | `/v1/stories/{id}/cover` | Queue cover regeneration |
 | POST | `/v1/stories/{id}/audio` | Queue audio regeneration |
+| GET | `/v1/stories/{id}/analyses/{index}` | Public cached analysis, `200 { analysis }` or `404`; never generates |
 | POST | `/v1/stories/{id}/analyses/{index}` | `200 { analysis }` or `202 { job }`; index starts at zero |
-| GET/HEAD | `/v1/stories/{id}/assets/{cover\|audio\|timeline}?version={uuid}` | Private resource, with ETag and byte-range support |
+| GET/HEAD | `/v1/stories/{id}/assets/{cover\|audio\|timeline}?version={uuid}` | Public resource, with ETag and byte-range support |
+
+Read without a token (replace the origin and story ID with your deployment's values):
+
+```sh
+curl 'https://fablo.example.com/v1/stories?limit=50'
+curl "https://fablo.example.com/v1/stories/$STORY_ID"
+curl "https://fablo.example.com/v1/stories/$STORY_ID/analyses/0"
+curl -o cover.jpg "https://fablo.example.com/v1/stories/$STORY_ID/assets/cover"
+```
+
+Browser readers can call these endpoints with ordinary `fetch` requests and no credentials. Public read requests and their `GET`/`HEAD` preflights accept any origin; authenticated browser operations retain the configured origin restrictions. Deploy this backend version and restart the `fablo` PM2 service to enable public reading; no new environment setting is needed. The current iOS connection screen still requires the administrator token for its generation and job-management features.
 
 Generation body:
 
@@ -146,7 +160,7 @@ Generation body:
 
 Story summaries, detail and status responses include `generationRequest` with the original `language`, `level`, `genre`, `length` and `topic`. The top-level language, level and genre remain available. Existing stories recover the original request from their retained generation jobs on service startup; if no original job exists, `generationRequest` is `null`. Cover, audio and analysis jobs also return this request as `request`, so clients can group jobs by `storyId` and apply the language filter before rendering cards. The iOS library shows one card per story, with resource progress and retry controls inside that card.
 
-Web clients can submit the token to `/v1/session` and then use `fetch` with `credentials: "include"`. Cookies use HttpOnly and SameSite=Strict, plus Secure when `PUBLIC_ORIGIN` is HTTPS. A same-origin frontend is the simplest deployment; bearer auth also works for an explicitly allowed frontend origin. Do not compile the administrator token into browser assets.
+Web clients that manage the library can submit the token to `/v1/session` and then use `fetch` with `credentials: "include"`. Cookies use HttpOnly and SameSite=Strict, plus Secure when `PUBLIC_ORIGIN` is HTTPS. A same-origin frontend is the simplest deployment; bearer auth also works for an explicitly allowed frontend origin. Do not compile the administrator token into browser assets.
 
 ## Import existing content
 
