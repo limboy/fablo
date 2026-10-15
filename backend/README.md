@@ -80,6 +80,8 @@ bun run dev
 
 The API and queue runner start together. Run the iOS app in Simulator and connect to `http://localhost:3000` with the configured `FABLO_API_TOKEN`. PM2 can also run the same combined entry point locally.
 
+Press Ctrl+C to stop the service, including in `--watch` mode. It logs `service.stopping`, aborts active generation, drains HTTP requests and closes SQLite before exiting. Shutdown has a 10-second deadline; a second Ctrl+C forces an immediate exit. Forced shutdown exits with code 1; any unsettled running job is recovered as failed after its lease expires on restart.
+
 ## Client flow
 
 1. The client sends generation options to `POST /v1/generations` with a fresh `Idempotency-Key`.

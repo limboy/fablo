@@ -182,14 +182,29 @@ if (import.meta.main) {
   const worker = new Worker(store, config);
   const workerDone = worker.runLoop(controller.signal);
   console.info(JSON.stringify({ event: "service.started", hostname: config.host, port: server.port }));
-  let stopping: Promise<void> | undefined;
-  const stop = (): Promise<void> => stopping ??= (async () => {
-    controller.abort();
-    // Drain HTTP requests and settle the active job before closing their shared DB.
-    const forceStop = setTimeout(() => { void server.stop(true); }, 10000);
-    try { await Promise.all([server.stop(), workerDone]); }
-    finally { clearTimeout(forceStop); store.close(); }
-  })();
-  process.on("SIGINT", stop);
-  process.on("SIGTERM", stop);
+  let stopping = false;
+  const forceExit = (reason: "signal" | "timeout"): never => {
+    console.error(JSON.stringify({ event: "service.shutdown_forced", reason }));
+    process.exit(1);
+  };
+  const stop = async (signal: "SIGINT" | "SIGTERM"): Promise<void> => {
+    if (stopping) forceExit("signal");
+    stopping = true;
+    console.info(JSON.stringify({ event: "service.stopping", signal }));
+    const deadline = setTimeout(() => forceExit("timeout"), 10000);
+    try {
+      controller.abort();
+      // Drain HTTP requests and settle the active job before closing their shared DB.
+      await Promise.all([server.stop(), workerDone]);
+      store.close();
+      console.info(JSON.stringify({ event: "service.stopped" }));
+      // --watch keeps its file watchers alive after the API and worker have stopped.
+      process.exit(0);
+    } catch (error) {
+      console.error(JSON.stringify({ event: "service.shutdown_failed", errorType: error instanceof Error ? error.name : "unknown" }));
+      process.exit(1);
+    } finally { clearTimeout(deadline); }
+  };
+  process.on("SIGINT", () => { void stop("SIGINT"); });
+  process.on("SIGTERM", () => { void stop("SIGTERM"); });
 }
