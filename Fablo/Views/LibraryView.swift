@@ -98,7 +98,7 @@ struct LibraryView: View {
             ForEach(ReadingStatus.allCases) { status in
                 let count = languageEntries.filter { $0.readingStatus == status }.count
                 Button {
-                    withAnimation(.snappy(duration: 0.25)) { board = status }
+                    board = status
                 } label: {
                     VStack(spacing: 5) {
                         Image(systemName: status.systemImage).font(.system(size: 19, weight: .semibold))
@@ -119,6 +119,8 @@ struct LibraryView: View {
                 .accessibilityAddTraits(board == status ? .isSelected : [])
             }
         }
+        // Keep selection animation in the controls so lazy cards appear at their final positions.
+        .animation(.snappy(duration: 0.25), value: board)
         .padding(6)
         .glassEffect(.regular, in: .capsule)
         .padding(.horizontal, 24)
