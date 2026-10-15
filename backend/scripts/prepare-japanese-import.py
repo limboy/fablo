@@ -47,7 +47,7 @@ def vocabulary(markdown):
 def display_sentence(line):
     # Display speaker labels from the original subtitle; the narration omits them.
     # Some legacy subtitles abbreviate narration or accidentally contain Chinese.
-    # The manifest's spoken Japanese is canonical; retain a matching speaker prefix.
+    # The manifest's spoken text is canonical; retain a matching speaker prefix.
     display = line["text"]
     subtitle = line.get("subtitle", "")
     speaker = re.match(r"^([^：:\n]{1,20}[：:])", subtitle)
@@ -161,9 +161,16 @@ def prepare(directory, output, titles, parser, mode, romanizer, args):
         "content": {"title": manifest["title"], "titleZh": title_zh, "summaryZh": summary[1].strip(), "coverPrompt": f"An illustration set in Japan. Scene: {manifest['setting']}. Topic: {manifest['topic']}. No text or lettering.", "paragraphs": [{"sentences": sentences}]},
         "analyses": {},
     }
+    return prepare_entry(directory, output, story, sentences, spoken, args)
+
+
+def prepare_entry(directory, output, story, sentences, spoken, args):
+    """Publish one prepared story and its existing media, shared by both adapters."""
+    manifest = story["source"]["metadata"]["manifest"]
+    count = len(sentences)
     if len(json.dumps(story["source"]["metadata"], ensure_ascii=False).encode()) > 64 * 1024:
         raise ValueError("Source metadata exceeds 64 KiB")
-    id = str(uuid.uuid5(NAMESPACE, FORMAT + ":" + directory.name))
+    id = str(uuid.uuid5(NAMESPACE, story["source"]["format"] + ":" + directory.name))
     cover = max((p for p in (directory / "cover.png", directory / "cover.jpg") if p.exists()), key=lambda p: p.stat().st_mtime_ns, default=None)
     audio, srt = directory / "audio.mp3", directory / "audio.srt"
     if audio.exists() != srt.exists():

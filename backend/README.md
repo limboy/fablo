@@ -193,6 +193,22 @@ bun run import:upload data/japanese-import --server https://fablo.example.com
 
 The uploader sends one story at a time, retries transient failures, refuses credential-bearing redirects, and saves progress without storing the token. Rerun the same command after interruption; completed stories are recognized by the server.
 
+### English Short Essays adapter
+
+The English adapter uses the same upload API and media pipeline, with spaCy's local English model for lexical classes and vocabulary lemmas. It retains contractions, hyphenated words and short vocabulary phrases as readable units. English readings and romanization remain empty; translations and vocabulary glosses come from the original files. Install the optional local model in your preparation environment:
+
+```sh
+data/import-venv/bin/pip install 'spacy>=3.8,<4'
+data/import-venv/bin/python -m spacy download en_core_web_sm
+data/import-venv/bin/python scripts/prepare-english-import.py \
+  "/path/to/English Short Essays" \
+  --output data/english-import \
+  --titles /path/to/chinese-titles.json
+bun run import:upload data/english-import --server https://fablo.example.com
+```
+
+B2–C1 entries are catalogued as C1, with the original range retained in source metadata. Source subtitle segments remain intact, including fragments that belong to longer sentences, to preserve their existing translations and audio boundaries. Missing covers and audio remain absent rather than triggering regeneration. Preparation does not call an AI service or require a backend redeployment.
+
 ## Verify
 
 ```sh

@@ -13,9 +13,10 @@ struct ImportContract {
         let client = BackendClient(connection: connection, cache: cache)
         let records = try await client.stories()
         precondition(records.count == Int(env["FABLO_TEST_STORIES"]!)!)
+        let language = StoryLanguage(rawValue: env["FABLO_TEST_LANGUAGE"] ?? "ja")!
         var covers = 0, audio = 0, sentenceCount = 0
         for record in records {
-            precondition(record.language == .ja && record.generationRequest != nil && !record.titleZh.isEmpty)
+            precondition(record.language == language && record.generationRequest != nil && !record.titleZh.isEmpty)
             let detail = try await client.story(record.id)
             let model = Story(record: detail, client: client)
             let content = detail.content!
@@ -39,8 +40,9 @@ struct ImportContract {
             }
         }
         precondition(audio == Int(env["FABLO_TEST_AUDIO_COUNT"]!)!)
+        if let count = env["FABLO_TEST_COVER_COUNT"] { precondition(covers == Int(count)!) }
         let restored = await BackendCache(root: cache.root).library(for: connection)
         precondition(restored.count == records.count && restored.allSatisfy { $0.content != nil })
-        print("Native import contract passed: \(records.count) Japanese stories, \(sentenceCount) sentences, \(covers) covers, \(audio) playable AAC files with matching timelines")
+        print("Native import contract passed: \(records.count) \(language.rawValue) stories, \(sentenceCount) sentences, \(covers) covers, \(audio) playable AAC files with matching timelines")
     }
 }

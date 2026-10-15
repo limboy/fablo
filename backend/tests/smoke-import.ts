@@ -9,7 +9,8 @@ import { Store } from "../src/store";
 
 const bundlePath = Bun.argv[2];
 if (!bundlePath) throw new Error("Usage: bun --no-env-file tests/smoke-import.ts /path/to/prepared-bundle");
-const bundle = await Bun.file(join(bundlePath, "bundle.json")).json() as { stories: { audio: boolean }[] };
+const bundle = await Bun.file(join(bundlePath, "bundle.json")).json() as { stories: { directory: string; audio: boolean; cover: boolean }[] };
+const firstPrepared = await Bun.file(join(bundlePath, bundle.stories[0]!.directory, "story.json")).json();
 const directory = await mkdtemp(join(tmpdir(), "fablo-import-smoke-"));
 const token = "local-import-test-" + crypto.randomUUID();
 const settings = loadConfig({ FABLO_API_TOKEN: token, AI_GATEWAY_KEY: "unused", DATA_DIR: directory });
@@ -29,7 +30,7 @@ try {
     const compile = Bun.spawn(["swiftc", "-swift-version", "5", "-module-cache-path", join(directory, "swift-cache"), ...sources.map(path => join(project, path)), "-o", binary], { stdout: "pipe", stderr: "pipe" });
     const [stdout, stderr, code] = await Promise.all([new Response(compile.stdout).text(), new Response(compile.stderr).text(), compile.exited]);
     if (code) throw new Error(`Swift compile failed:\n${stdout}\n${stderr}`);
-    const child = Bun.spawn([binary], { env: { PATH: process.env.PATH, HOME: process.env.HOME, FABLO_TEST_URL: url, FABLO_TEST_TOKEN: token, FABLO_TEST_OUTPUT: directory, FABLO_TEST_STORIES: String(bundle.stories.length), FABLO_TEST_AUDIO_COUNT: String(bundle.stories.filter(s => s.audio).length) }, stdout: "pipe", stderr: "pipe" });
+    const child = Bun.spawn([binary], { env: { PATH: process.env.PATH, HOME: process.env.HOME, FABLO_TEST_URL: url, FABLO_TEST_TOKEN: token, FABLO_TEST_OUTPUT: directory, FABLO_TEST_STORIES: String(bundle.stories.length), FABLO_TEST_LANGUAGE: firstPrepared.generationRequest.language, FABLO_TEST_AUDIO_COUNT: String(bundle.stories.filter(s => s.audio).length), FABLO_TEST_COVER_COUNT: String(bundle.stories.filter(s => s.cover).length) }, stdout: "pipe", stderr: "pipe" });
     const [out, err, exit] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
     if (exit) throw new Error(`Native import contract failed:\n${out}\n${err}`);
     console.info(out.trim());
