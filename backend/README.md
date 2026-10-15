@@ -27,7 +27,7 @@ BUN_BIN=/absolute/path/to/bun pm2 start ecosystem.config.cjs
 pm2 save
 ```
 
-The `fablo` service runs as one instance in fork mode. Bun loads `.env` from the configured working directory. The HTTP API and queue runner share a database connection; upstream AI requests are asynchronous and FFmpeg runs as a subprocess. On shutdown, the service stops accepting connections, aborts the active generation and settles its job before closing the shared database. To include Fablo in your central ecosystem file:
+The `fablo` service runs as one instance in fork mode. PM2 executes the Bun binary with `interpreter: "none"` and passes `src/server.ts` as its argument. This keeps the server as Bun's entry point; newer PM2 versions otherwise load Bun scripts through a wrapper, which skips the server's `import.meta.main` startup check. Bun loads `.env` from the configured working directory. The HTTP API and queue runner share a database connection; upstream AI requests are asynchronous and FFmpeg runs as a subprocess. On shutdown, the service stops accepting connections, aborts the active generation and settles its job before closing the shared database. To include Fablo in your central ecosystem file:
 
 ```js
 const { apps: fabloApps } = require("/absolute/path/to/fablo/backend/ecosystem.config.cjs");
@@ -59,6 +59,16 @@ pm2 logs fablo
 # After updating code or .env:
 pm2 restart ecosystem.config.cjs --update-env
 ```
+
+If you previously registered `src/server.ts` with `interpreter: "bun"`, recreate the PM2 entry once to apply the direct executable launch:
+
+```sh
+pm2 delete fablo
+BUN_BIN="$(command -v bun)" pm2 start ecosystem.config.cjs
+pm2 save
+```
+
+For a proxy error after switching from `bun run dev` to PM2, check `pm2 logs fablo --lines 40 --nostream` for `service.started` and its port. Test `/health` on that local port and make sure Nginx's `proxy_pass` targets the same address. `online` in PM2 alone does not confirm the HTTP server started. If the listener uses an unexpected port, check for inherited `PORT` values and production `.env` overrides.
 
 If you previously started `fablo-api` and `fablo-worker`, remove those two old PM2 entries before starting `fablo` so the old API does not occupy the port:
 
@@ -144,6 +154,6 @@ bun test
 bun run test:pm2
 ```
 
-The PM2 smoke test creates its own temporary `PM2_HOME`, database and mock AI Gateway. It exercises the combined service, real FFmpeg output, HTTP responsiveness during generation, graceful shutdown, queued-job recovery and, on macOS with Swift installed, the production Swift API client. It cleans up its own processes and temporary files. It makes no paid AI requests and never talks to the user's existing PM2 daemon.
+The PM2 smoke test copies the service source and ecosystem file into a temporary directory with a mock `.env`, its own `PM2_HOME`, database and mock AI Gateway. It checks production `.env` loading, the combined service, real FFmpeg output, HTTP responsiveness during generation, graceful shutdown, queued-job recovery and, on macOS with Swift installed, the production Swift API client. It cleans up its own processes and temporary files. It makes no paid AI requests, never loads the real service's `.env` and never talks to the user's existing PM2 daemon.
 
-Bun/PM2 configuration follows the [Bun PM2 guide](https://bun.sh/guides/ecosystem/pm2); database access uses [bun:sqlite](https://bun.sh/docs/runtime/sqlite).
+Bun/PM2 background service concepts follow the [Bun PM2 guide](https://bun.sh/guides/ecosystem/pm2). The ecosystem file uses PM2's [direct executable launch](https://github.com/Unitech/pm2/blob/master/lib/God/ForkMode.js) to preserve Bun's entry point; database access uses [bun:sqlite](https://bun.sh/docs/runtime/sqlite).

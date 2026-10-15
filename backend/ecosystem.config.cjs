@@ -2,7 +2,8 @@ const path = require("node:path");
 
 const common = {
   cwd: __dirname,
-  interpreter: process.env.BUN_BIN || "bun",
+  // Launch Bun directly so PM2's Bun loader cannot bypass import.meta.main.
+  interpreter: "none",
   exec_mode: "fork",
   instances: 1,
   autorestart: true,
@@ -15,6 +16,6 @@ const common = {
 
 module.exports = {
   apps: [
-    { ...common, name: "fablo", script: path.join(__dirname, "src/server.ts"), max_memory_restart: "1G" },
+    { ...common, name: "fablo", script: process.env.BUN_BIN || "bun", args: [path.join(__dirname, "src/server.ts")], max_memory_restart: "1G" },
   ],
 };

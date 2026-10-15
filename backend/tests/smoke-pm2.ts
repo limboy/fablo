@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { cp, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 import { Store } from "../src/store";
@@ -7,6 +7,9 @@ import { content, analysis, request, wav } from "./fixtures";
 // This never touches the user's PM2 daemon, credentials or AI provider.
 const directory = await mkdtemp(join(tmpdir(), "fablo-pm2-smoke-"));
 const backend = resolve(import.meta.dir, ".."), project = resolve(backend, "..");
+const serviceDirectory = join(directory, "backend"), dataDir = join(directory, "data");
+await cp(join(backend, "src"), join(serviceDirectory, "src"), { recursive: true });
+await cp(join(backend, "ecosystem.config.cjs"), join(serviceDirectory, "ecosystem.config.cjs"));
 const pm2 = Bun.which("pm2");
 if (!pm2) throw new Error("Install PM2 to run this smoke test");
 const imageProcess = Bun.spawn(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "color=c=orange:s=16x16", "-frames:v", "1", "-f", "image2pipe", "-c:v", "png", "pipe:1"], { stdout: "pipe", stderr: "pipe" });
@@ -39,9 +42,15 @@ const reservation = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: () => new
 const port = reservation.port!;
 await reservation.stop(true);
 const token = "smoke-" + crypto.randomUUID();
-const env = { ...process.env, PM2_HOME: join(directory, "pm2"), FABLO_API_TOKEN: token, AI_GATEWAY_KEY: "mock-key", AI_GATEWAY_URL: `http://127.0.0.1:${gateway.port}`, DATA_DIR: join(directory, "data"), HOST: "127.0.0.1", PORT: String(port), BUN_BIN: process.execPath };
+// Exercise Bun's production .env loading rather than injecting service settings
+// into PM2's environment. The real backend/.env is never loaded by the service.
+await writeFile(join(serviceDirectory, ".env"), Object.entries({
+  FABLO_API_TOKEN: token, AI_GATEWAY_KEY: "mock-key", AI_GATEWAY_URL: `http://127.0.0.1:${gateway.port}`,
+  DATA_DIR: dataDir, HOST: "127.0.0.1", PORT: String(port), PUBLIC_ORIGIN: `http://127.0.0.1:${port}`,
+}).map(([key, value]) => `${key}=${JSON.stringify(value)}`).join("\n") + "\n");
+const env = { PATH: process.env.PATH, HOME: process.env.HOME, USER: process.env.USER, TMPDIR: process.env.TMPDIR, PM2_HOME: join(directory, "pm2"), BUN_BIN: process.execPath };
 async function command(args: string[], customEnv: Record<string, string | undefined> = env) {
-  const process = Bun.spawn(args, { cwd: backend, env: customEnv, stdout: "pipe", stderr: "pipe" });
+  const process = Bun.spawn(args, { cwd: serviceDirectory, env: customEnv, stdout: "pipe", stderr: "pipe" });
   const [stdout, stderr, exit] = await Promise.all([new Response(process.stdout).text(), new Response(process.stderr).text(), process.exited]);
   if (exit !== 0) throw new Error(`Command failed: ${args[0]}\n${stdout.slice(-3000)}\n${stderr.slice(-3000)}`);
   return stdout;
@@ -75,7 +84,7 @@ try {
   await command([pm2, "stop", "fablo"]);
   releaseAnalysis!();
   analysisGate = null;
-  const persisted = new Store(env.DATA_DIR);
+  const persisted = new Store(dataDir);
   try {
     if (persisted.getJob(blocked.job.id)?.status !== "failed") throw new Error("Shutdown did not settle the interrupted job");
     if (persisted.getJob(queued.job.id)?.status !== "queued") throw new Error("Shutdown lost queued work");
