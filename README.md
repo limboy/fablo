@@ -17,7 +17,7 @@ All explanations are in Simplified Chinese.
 
 ## How it works
 
-Everything goes through [Vercel AI Gateway](https://vercel.com/ai-gateway) via a thin client in [GatewayClient.swift](Fablo/Services/GatewayClient.swift):
+The iOS app connects to a Bun backend deployed on your VPS, running the API and generation queue in one PM2 service named `fablo`. The backend calls [Vercel AI Gateway](https://vercel.com/ai-gateway):
 
 | Task | Model |
 | --- | --- |
@@ -26,39 +26,35 @@ Everything goes through [Vercel AI Gateway](https://vercel.com/ai-gateway) via a
 | Narration | `google/gemini-3.8-flash-tts` |
 | Word timings for highlighting | `microsoft/mai-transcribe-2` |
 
-Stories are stored locally with SwiftData.
+Stories, analyses and generation jobs are stored on the server in SQLite; covers, narration and word timings are stored alongside it. Adding a story submits a server job, and the app automatically refreshes the library and downloads the results. The server library is the source of all reading content. The app retains reading preferences and connection settings, plus disposable downloaded audio in its system cache.
 
 ## Project layout
 
 ```
 Fablo/
   App/        App entry point
-  Models/     Story (SwiftData) and generated content types
-  Services/   AI Gateway client, prompts, audio generation and playback
+  Models/     Observable server records and generated content types
+  Services/   Backend API client, connection credentials, audio downloads and playback
   Views/      Library, new story, reader, sentence analysis
+backend/      Bun API, worker, SQLite storage and PM2 configuration
 marketing-video/   Remotion promo video
 project.yml        XcodeGen spec
 ```
 
 ## Getting started
 
-Requirements: Xcode with the iOS 26 SDK, and a Vercel AI Gateway API key.
+Requirements: Xcode with the iOS 26 SDK, and the [Bun backend](backend/README.md) running behind HTTPS.
 
-1. Add your key:
-
-   ```bash
-   cp Secrets.swift.example Fablo/Services/Secrets.swift
-   ```
-
-   Then replace `YOUR_VERCEL_AI_GATEWAY_KEY` in `Fablo/Services/Secrets.swift`. This file is gitignored.
-
+1. Deploy the backend using the [PM2 deployment instructions](backend/README.md). The Gateway key stays in the server's `.env` file.
 2. Open the project and run on an iPhone or simulator:
 
    ```bash
    open Fablo.xcodeproj
    ```
 
-   For on-device builds, change `DEVELOPMENT_TEAM` in `project.yml` (or in Xcode's Signing settings) to your own team.
+3. Tap **连接服务** in the app and enter your HTTPS backend address and access token. The token is saved in Keychain. Tap **+** to generate a story on the server; it appears automatically when the text is ready. The same API is available for a future web client.
+
+For on-device builds, change `DEVELOPMENT_TEAM` in `project.yml` (or in Xcode's Signing settings) to your own team. For local simulator development, start the backend with `bun run dev` from `backend/` and connect to `http://localhost:3000`.
 
 If you change `project.yml`, regenerate the Xcode project with [XcodeGen](https://github.com/yonaskolb/XcodeGen):
 
@@ -66,7 +62,7 @@ If you change `project.yml`, regenerate the Xcode project with [XcodeGen](https:
 xcodegen generate
 ```
 
-> **Note:** the API key is compiled into the app binary, where it can be extracted. Put the gateway behind your own backend before distributing the app.
+No AI Gateway key is compiled into the app. A legacy `Fablo/Services/Secrets.swift` is excluded from the Xcode target.
 
 ## Marketing video
 

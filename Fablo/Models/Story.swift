@@ -1,56 +1,78 @@
 import Foundation
-import SwiftData
+import Observation
 
-@Model
-final class Story {
-    @Attribute(.unique) var id: UUID
-    var createdAt: Date
-    var languageRaw: String
-    var level: String
-    var genre: String
-    var title: String
-    var titleZh: String
-    var summaryZh: String
-    var coverPrompt: String
-    var contentData: Data
-    @Attribute(.externalStorage) var coverData: Data?
-    var coverFailed: Bool = false
-    var analysesData: Data?
+/// An in-memory view of a server record, never created or persisted by the client.
+@Observable
+final class Story: Identifiable, Hashable {
+    let id: UUID
+    let client: BackendClient
+    private(set) var createdAt: Date
+    private(set) var language: StoryLanguage
+    private(set) var level: String
+    private(set) var genre: String
+    private(set) var title: String
+    private(set) var titleZh: String
+    private(set) var summaryZh: String
+    private(set) var generationRequest: BackendGenerationRequest?
+    private(set) var coverStatus: String
+    private(set) var audioStatus: String
+    private(set) var coverVersion: String?
+    private(set) var audioVersion: String?
+    private var content: StoryContent?
+    private var analyses: [String: SentenceAnalysis]
+    var coverData: Data?
 
-    init(content: StoryContent, request: StoryRequest) throws {
-        id = UUID()
-        createdAt = .now
-        languageRaw = request.language.rawValue
-        level = request.level.name
-        genre = request.genre.rawValue
-        title = content.title
-        titleZh = content.titleZh
-        summaryZh = content.summaryZh
-        coverPrompt = content.coverPrompt
-        contentData = try JSONEncoder().encode(content)
+    init(record: BackendStory, client: BackendClient) {
+        id = record.id
+        self.client = client
+        createdAt = Self.date(record.createdAt)
+        language = record.language
+        level = record.level
+        genre = record.genre
+        title = record.title
+        titleZh = record.titleZh
+        summaryZh = record.summaryZh
+        generationRequest = record.generationRequest
+        coverStatus = record.coverStatus
+        audioStatus = record.audioStatus
+        coverVersion = record.coverVersion
+        audioVersion = record.audioVersion
+        content = record.content
+        analyses = record.analyses ?? [:]
     }
 
-    var language: StoryLanguage { StoryLanguage(rawValue: languageRaw) ?? .en }
+    func apply(_ record: BackendStory) {
+        createdAt = Self.date(record.createdAt)
+        language = record.language
+        level = record.level
+        genre = record.genre
+        title = record.title
+        titleZh = record.titleZh
+        summaryZh = record.summaryZh
+        generationRequest = record.generationRequest
+        coverStatus = record.coverStatus
+        audioStatus = record.audioStatus
+        if coverVersion != record.coverVersion { coverData = nil }
+        coverVersion = record.coverVersion
+        audioVersion = record.audioVersion
+        if let content = record.content { self.content = content }
+        if let analyses = record.analyses { self.analyses = analyses }
+    }
 
+    var coverFailed: Bool { coverStatus == "failed" }
     var genreSymbol: String { StoryGenre(rawValue: genre)?.symbol ?? "book.fill" }
+    func decodedContent() -> StoryContent? { content }
+    func analysis(for index: Int) -> SentenceAnalysis? { analyses[String(index)] }
+    func setAnalysis(_ analysis: SentenceAnalysis, for index: Int) { analyses[String(index)] = analysis }
 
-    func decodedContent() -> StoryContent? {
-        try? JSONDecoder().decode(StoryContent.self, from: contentData)
+    static func date(_ value: String) -> Date {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: value) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: value) ?? .distantPast
     }
 
-    // Analyses are cached per sentence index so reopening a sentence is instant.
-    private var analyses: [String: SentenceAnalysis] {
-        guard let analysesData else { return [:] }
-        return (try? JSONDecoder().decode([String: SentenceAnalysis].self, from: analysesData)) ?? [:]
-    }
-
-    func analysis(for index: Int) -> SentenceAnalysis? {
-        analyses[String(index)]
-    }
-
-    func setAnalysis(_ analysis: SentenceAnalysis, for index: Int) {
-        var all = analyses
-        all[String(index)] = analysis
-        analysesData = try? JSONEncoder().encode(all)
-    }
+    static func == (lhs: Story, rhs: Story) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }

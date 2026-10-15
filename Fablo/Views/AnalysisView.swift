@@ -1,4 +1,3 @@
-import SwiftData
 import SwiftUI
 
 struct AnalysisView: View {
@@ -6,7 +5,6 @@ struct AnalysisView: View {
     let content: StoryContent
     let ref: SentenceRef
 
-    @Environment(\.modelContext) private var modelContext
     @Environment(SpeechPlayer.self) private var player
     @AppStorage("speechRate") private var speechRate = 1.0
 
@@ -202,9 +200,8 @@ struct AnalysisView: View {
         }
         errorMessage = nil
         do {
-            let result = try await StoryGenerator.analyze(index: ref.id, in: content, language: story.language, level: story.level)
+            let result = try await story.client.analysis(for: story.id, sentence: ref.id)
             story.setAnalysis(result, for: ref.id)
-            try? modelContext.save()
             analysis = result
         } catch {
             errorMessage = error.localizedDescription

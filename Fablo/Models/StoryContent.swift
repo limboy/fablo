@@ -101,7 +101,7 @@ enum StoryGenre: String, CaseIterable, Identifiable {
     }
 }
 
-enum StoryLength: String, CaseIterable, Identifiable {
+enum StoryLength: String, Codable, CaseIterable, Identifiable {
     case short, medium, long
 
     var id: String { rawValue }

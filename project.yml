@@ -11,12 +11,16 @@ targets:
   Fablo:
     type: application
     platform: iOS
-    sources: [Fablo]
+    sources:
+      - path: Fablo
+        excludes: [Services/Secrets.swift]
     info:
       path: Fablo/Info.plist
       properties:
         # Keep narration playing after leaving the app.
         UIBackgroundModes: [audio]
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.limboy.fablo

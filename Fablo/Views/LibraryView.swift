@@ -1,21 +1,21 @@
-import SwiftData
 import SwiftUI
 
 struct LibraryView: View {
     @Environment(StoryStudio.self) private var studio
-    @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Story.createdAt, order: .reverse) private var stories: [Story]
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(SpeechPlayer.self) private var player
 
     @State private var filter: StoryLanguage?
     @State private var showingNewStory = false
+    @State private var showingBackendSettings = false
+    @State private var path: [Story] = []
 
-    private var visibleStories: [Story] {
-        guard let filter else { return stories }
-        return stories.filter { $0.language == filter }
-    }
+    private var stories: [Story] { studio.stories }
+
+    private var entries: [LibraryEntry] { LibraryEntry.make(stories: stories, jobs: studio.jobs, language: filter) }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollView {
                 LazyVStack(spacing: 18) {
                     Picker("语言", selection: $filter) {
@@ -27,50 +27,62 @@ struct LibraryView: View {
                     .pickerStyle(.segmented)
                     .padding(.bottom, 4)
 
-                    ForEach(studio.jobs) { job in
-                        JobCard(job: job)
+                    if let error = studio.errorMessage {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(error).font(.callout).foregroundStyle(.red)
+                            Button("重试") { Task { await studio.refresh() } }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
-                    ForEach(visibleStories) { story in
-                        NavigationLink(value: story) {
-                            StoryCard(story: story)
-                        }
-                        .buttonStyle(.plain)
-                        .contextMenu {
-                            Button("重新生成封面", systemImage: "photo") {
-                                studio.generateCover(for: story, in: modelContext)
-                            }
-                            Button("删除", systemImage: "trash", role: .destructive) {
-                                let id = story.id
-                                Task { await StoryAudioStore.shared.remove(id) }
-                                modelContext.delete(story)
-                                try? modelContext.save()
-                            }
-                        }
+                    ForEach(entries) { entry in
+                        LibraryEntryCard(entry: entry)
                     }
 
-                    if stories.isEmpty && studio.jobs.isEmpty {
-                        emptyState
+                    if entries.isEmpty {
+                        if stories.isEmpty && studio.jobs.isEmpty && studio.isRefreshing {
+                            ProgressView("正在读取书库…").padding(.top, 80)
+                        } else if let filter, !stories.isEmpty || !studio.jobs.isEmpty {
+                            ContentUnavailableView("还没有\(filter.chineseName)短文", systemImage: "books.vertical",
+                                                   description: Text("切换语言或创作一篇新短文。"))
+                        } else {
+                            emptyState
+                        }
                     }
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 40)
             }
             .background(Theme.paper.ignoresSafeArea())
+            .refreshable { await studio.refresh() }
             .navigationTitle("Fablo")
             .toolbarTitleDisplayMode(.inlineLarge)
             .navigationDestination(for: Story.self) { story in
                 ReaderView(story: story)
             }
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("连接服务", systemImage: "gearshape") { showingBackendSettings = true }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("新短文", systemImage: "plus") { showingNewStory = true }
                         .buttonStyle(.glassProminent)
+                        .disabled(!studio.isConfigured)
                 }
             }
             .sheet(isPresented: $showingNewStory) {
                 NewStoryView()
                     .presentationBackground(Theme.paper)
+            }
+            .sheet(isPresented: $showingBackendSettings) { BackendSettingsView() }
+            .task(id: scenePhase) {
+                if scenePhase == .active { await studio.observe() }
+            }
+            .onChange(of: stories.map(\.id)) { _, ids in
+                if let current = path.last, !ids.contains(current.id) {
+                    player.stop()
+                    path = []
+                }
             }
         }
     }
@@ -78,11 +90,13 @@ struct LibraryView: View {
     private var emptyState: some View {
         VStack(spacing: 14) {
             Image(systemName: "books.vertical.fill").font(.system(size: 50)).foregroundStyle(Theme.accent)
-            Text("还没有短文").font(.title3.weight(.semibold))
-            Text("选一个语言、难度和类型，\nAI 会为你写一篇专属读物。")
+            Text(studio.isConfigured ? "还没有短文" : "连接你的书库").font(.title3.weight(.semibold))
+            Text(studio.isConfigured ? "选一个语言、难度和类型，\nAI 会为你写一篇专属读物。" : "连接服务后，即可阅读和创作短文。")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(Theme.muted)
-            Button("创作第一篇", systemImage: "sparkles") { showingNewStory = true }
+            Button(studio.isConfigured ? "创作第一篇" : "连接服务", systemImage: studio.isConfigured ? "sparkles" : "network") {
+                if studio.isConfigured { showingNewStory = true } else { showingBackendSettings = true }
+            }
                 .buttonStyle(.glassProminent)
                 .padding(.top, 6)
         }
@@ -106,6 +120,15 @@ struct StoryCard: View {
                 Text(story.titleZh)
                     .font(.subheadline)
                     .foregroundStyle(Theme.muted)
+                if let request = story.generationRequest {
+                    HStack(spacing: 6) {
+                        TagLabel(text: request.length.label)
+                        if !request.topic.isEmpty {
+                            Text(request.topic).font(.caption).foregroundStyle(Theme.muted).lineLimit(2)
+                        }
+                    }
+                    .padding(.top, 4)
+                }
                 HStack(spacing: 6) {
                     TagLabel(text: "\(story.language.code) · \(story.level)")
                     TagLabel(text: story.genre, systemImage: story.genreSymbol)
@@ -118,49 +141,109 @@ struct StoryCard: View {
             }
             .padding(16)
         }
-        .background(Theme.raised)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .shadow(color: .black.opacity(0.06), radius: 10, y: 4)
     }
 }
 
-private struct JobCard: View {
-    let job: StoryStudio.Job
+private struct LibraryEntryCard: View {
+    let entry: LibraryEntry
     @Environment(StoryStudio.self) private var studio
-    @Environment(\.modelContext) private var modelContext
 
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            Image(systemName: job.request.genre.symbol)
-                .font(.system(size: 24))
-                .foregroundStyle(Theme.accent)
-                .frame(width: 56, height: 56)
-                .background(Theme.card, in: RoundedRectangle(cornerRadius: 16))
-            VStack(alignment: .leading, spacing: 6) {
-                Text("\(job.request.language.nativeName) \(job.request.level.name) · \(job.request.genre.rawValue) · \(job.request.length.label)")
-                    .font(.subheadline.weight(.semibold))
-                if let error = job.error {
-                    Text(error).font(.caption).foregroundStyle(.red).lineLimit(3)
-                    HStack {
-                        Button("重试") { studio.retry(job.id, in: modelContext) }
-                        Button("移除", role: .destructive) { studio.dismiss(job.id) }
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                } else {
-                    TimelineView(.periodic(from: job.startedAt, by: 1)) { context in
-                        HStack(spacing: 6) {
-                            ProgressView().controlSize(.small)
-                            Text("正在创作并逐词标注… \(Int(context.date.timeIntervalSince(job.startedAt)))s")
-                                .font(.caption)
-                                .foregroundStyle(Theme.muted)
+        VStack(alignment: .leading, spacing: 0) {
+            if let story = entry.story {
+                NavigationLink(value: story) { StoryCard(story: story) }
+                    .buttonStyle(.plain)
+            } else {
+                HStack(alignment: .top, spacing: 14) {
+                    Image(systemName: entry.request?.storyRequest.genre.symbol ?? "sparkles")
+                        .font(.system(size: 24)).foregroundStyle(Theme.accent)
+                        .frame(width: 56, height: 56)
+                        .background(Theme.card, in: RoundedRectangle(cornerRadius: 16))
+                    VStack(alignment: .leading, spacing: 6) {
+                        if let request = entry.request?.storyRequest {
+                            Text("\(request.language.nativeName) · \(request.level.name)")
+                                .font(.subheadline.weight(.semibold))
+                            Text("\(request.genre.rawValue) · \(request.length.label)")
+                                .font(.caption).foregroundStyle(Theme.muted)
+                            if !request.topic.isEmpty {
+                                Text(request.topic).font(.caption).foregroundStyle(Theme.muted).lineLimit(2)
+                            }
+                        } else {
+                            Text("正在准备短文").font(.subheadline.weight(.semibold))
                         }
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(16)
+            }
+            if !entry.jobs.isEmpty {
+                if entry.story != nil { Divider().padding(.horizontal, 16) }
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(entry.jobs) { job in JobStatusRow(job: job) }
+                }
+                .padding(16)
+            }
+        }
+        .background(Theme.raised)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .shadow(color: .black.opacity(0.06), radius: 10, y: 4)
+        .contextMenu {
+            if let story = entry.story {
+                Button("重新生成封面", systemImage: "photo") { studio.generateCover(for: story) }
+                Button("重新生成音频", systemImage: "waveform") { studio.generateAudio(for: story) }
+                Button("删除", systemImage: "trash", role: .destructive) { studio.delete(story) }
+            }
+        }
+    }
+}
+
+private struct JobStatusRow: View {
+    let job: BackendJob
+    @Environment(StoryStudio.self) private var studio
+
+    private var resource: String {
+        switch job.kind {
+        case "cover": return "封面"
+        case "audio": return "音频"
+        case "analysis": return "第 \((job.sentenceIndex ?? 0) + 1) 句解析"
+        default: return "短文"
+        }
+    }
+
+    private var status: String {
+        if job.status == "failed" { return "\(resource)生成失败" }
+        if job.status == "queued" { return "\(resource)等待处理…" }
+        switch job.kind {
+        case "cover": return "正在绘制封面…"
+        case "audio": return "正在生成朗读音频…"
+        case "analysis": return "正在解析第 \((job.sentenceIndex ?? 0) + 1) 句…"
+        default: return "正在创作并逐词标注…"
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                if job.isActive { ProgressView().controlSize(.small) }
+                else { Image(systemName: "exclamationmark.circle").foregroundStyle(.red) }
+                Text(status).font(.caption).foregroundStyle(job.status == "failed" ? .red : Theme.muted)
+                Spacer(minLength: 0)
+                if job.isActive {
+                    TimelineView(.periodic(from: Story.date(job.createdAt), by: 1)) { context in
+                        Text("\(max(0, Int(context.date.timeIntervalSince(Story.date(job.createdAt)))))s")
+                            .font(.caption.monospacedDigit()).foregroundStyle(Theme.muted)
                     }
                 }
             }
-            Spacer(minLength: 0)
+            if job.status == "failed" {
+                if let error = job.error { Text(error).font(.caption).foregroundStyle(.red).lineLimit(3) }
+                HStack {
+                    Button("重试") { studio.retry(job.id) }
+                    Button("忽略") { studio.dismiss(job.id) }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
         }
-        .padding(16)
-        .background(Theme.raised, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 }

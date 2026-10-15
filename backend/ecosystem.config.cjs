@@ -1,0 +1,20 @@
+const path = require("node:path");
+
+const common = {
+  cwd: __dirname,
+  interpreter: process.env.BUN_BIN || "bun",
+  exec_mode: "fork",
+  instances: 1,
+  autorestart: true,
+  watch: false,
+  time: true,
+  restart_delay: 2000,
+  kill_timeout: 15000,
+  env: { NODE_ENV: "production" },
+};
+
+module.exports = {
+  apps: [
+    { ...common, name: "fablo", script: path.join(__dirname, "src/server.ts"), max_memory_restart: "1G" },
+  ],
+};

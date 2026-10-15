@@ -1,9 +1,7 @@
-import SwiftData
 import SwiftUI
 
 struct NewStoryView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
     @Environment(StoryStudio.self) private var studio
 
     @AppStorage("lastLanguage") private var language: StoryLanguage = .ja
@@ -12,6 +10,10 @@ struct NewStoryView: View {
     @AppStorage("lastGenre") private var genreRaw = StoryGenre.fable.rawValue
     @AppStorage("lastLength") private var lengthRaw = StoryLength.short.rawValue
     @State private var topic = ""
+    @State private var isSubmitting = false
+    @State private var errorMessage: String?
+    @State private var submissionKey = UUID()
+    @State private var lastRequest: StoryRequest?
 
     private var levelID: Binding<String> {
         language == .en ? $enLevel : $jaLevel
@@ -73,6 +75,7 @@ struct NewStoryView: View {
                             .padding(14)
                             .background(Theme.raised, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
+                    if let errorMessage { Text(errorMessage).font(.callout).foregroundStyle(.red) }
                 }
                 .padding(20)
                 .padding(.bottom, 80)
@@ -87,19 +90,25 @@ struct NewStoryView: View {
             }
             .safeAreaInset(edge: .bottom) {
                 Button {
-                    studio.start(
-                        StoryRequest(
+                    let request = StoryRequest(
                             language: language,
                             level: level,
                             genre: StoryGenre(rawValue: genreRaw) ?? .fable,
                             length: StoryLength(rawValue: lengthRaw) ?? .short,
                             topic: topic
-                        ),
-                        in: modelContext
-                    )
-                    dismiss()
+                        )
+                    if lastRequest != request { submissionKey = UUID(); lastRequest = request }
+                    isSubmitting = true
+                    errorMessage = nil
+                    Task {
+                        defer { isSubmitting = false }
+                        do {
+                            try await studio.start(request, idempotencyKey: submissionKey)
+                            dismiss()
+                        } catch { errorMessage = error.localizedDescription }
+                    }
                 } label: {
-                    Label("开始创作", systemImage: "sparkles")
+                    Label(isSubmitting ? "正在提交…" : "开始创作", systemImage: "sparkles")
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 6)
@@ -109,6 +118,8 @@ struct NewStoryView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 8)
             }
+            .disabled(isSubmitting)
+            .interactiveDismissDisabled(isSubmitting)
         }
     }
 

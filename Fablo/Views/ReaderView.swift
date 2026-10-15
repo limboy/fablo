@@ -1,4 +1,3 @@
-import SwiftData
 import SwiftUI
 
 struct ReaderView: View {
@@ -6,7 +5,6 @@ struct ReaderView: View {
 
     @Environment(SpeechPlayer.self) private var player
     @Environment(StoryStudio.self) private var studio
-    @Environment(\.modelContext) private var modelContext
 
     @AppStorage("showFurigana") private var showFurigana = true
     @AppStorage("showRomaji") private var showRomaji = true
@@ -15,6 +13,8 @@ struct ReaderView: View {
     @AppStorage("loopPlayback") private var loopPlayback = false
 
     @State private var content: StoryContent?
+    @State private var isLoading = true
+    @State private var errorMessage: String?
     @State private var selectedID: Int?
     @State private var analysisTarget: SentenceRef?
     @State private var scrollPosition = ScrollPosition(idType: Int.self)
@@ -37,8 +37,14 @@ struct ReaderView: View {
                         sentenceView(ref)
                             .padding(.bottom, sentenceSpacing(after: ref.id, paragraphEnds: paragraphEnds))
                     }
+                } else if isLoading {
+                    ProgressView("正在读取短文…").frame(maxWidth: .infinity).padding(.vertical, 40)
                 } else {
-                    ContentUnavailableView("无法读取这篇短文", systemImage: "exclamationmark.triangle")
+                    VStack(spacing: 12) {
+                        Text(errorMessage ?? "无法读取这篇短文").foregroundStyle(Theme.muted)
+                        Button("重试") { Task { await load() } }
+                    }
+                    .frame(maxWidth: .infinity).padding(.vertical, 40)
                 }
             }
             .scrollTargetLayout()
@@ -65,11 +71,7 @@ struct ReaderView: View {
                 AnalysisView(story: story, content: content, ref: ref)
             }
         }
-        .task {
-            if content == nil { content = story.decodedContent() }
-            // Narration takes a while to generate; start now so play is instant later.
-            if let content { StoryAudioStore.shared.prepare(StoryAudioSource(story: story, content: content)) }
-        }
+        .task { await load() }
         .onDisappear {
             if isPlayingThisStory { player.stop() }
         }
@@ -85,7 +87,7 @@ struct ReaderView: View {
                 .overlay(alignment: .bottomTrailing) {
                     if story.coverData == nil, story.coverFailed {
                         Button("重新生成封面", systemImage: "arrow.clockwise") {
-                            studio.generateCover(for: story, in: modelContext)
+                            studio.generateCover(for: story)
                         }
                         .buttonStyle(.glass)
                         .padding(12)
@@ -120,6 +122,19 @@ struct ReaderView: View {
     }
 
     // MARK: Sentences
+
+    private func load() async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        do {
+            story.apply(try await story.client.story(story.id))
+            content = story.decodedContent()
+            if let content { StoryAudioStore.shared.prepare(StoryAudioSource(story: story, content: content)) }
+        } catch {
+            if !Task.isCancelled { errorMessage = error.localizedDescription }
+        }
+    }
 
     private func sentenceView(_ ref: SentenceRef) -> some View {
         SentenceView(
@@ -186,6 +201,7 @@ struct ReaderView: View {
                     .background(Theme.accent, in: Circle())
             }
             .buttonStyle(.plain)
+            .disabled(content == nil)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(statusTitle).font(.subheadline.weight(.semibold))
@@ -274,6 +290,7 @@ struct ReaderView: View {
 struct CoverView: View {
     let story: Story
     @Environment(StoryStudio.self) private var studio
+    @State private var loadingFailed = false
 
     var body: some View {
         ZStack {
@@ -296,9 +313,23 @@ struct CoverView: View {
                             Text("正在绘制封面…").font(.caption)
                         }
                         .foregroundStyle(Theme.muted)
+                    } else if loadingFailed {
+                        Button("重新加载封面") { Task { await loadCover() } }
+                            .font(.caption)
                     }
                 }
             }
         }
+        .task(id: story.coverVersion) { await loadCover() }
+    }
+
+    private func loadCover() async {
+        guard let version = story.coverVersion, story.coverData == nil else { return }
+        loadingFailed = false
+        do {
+            let data = try await story.client.asset("cover", storyID: story.id, version: version)
+            guard !Task.isCancelled, story.coverVersion == version else { return }
+            story.coverData = data
+        } catch { if !Task.isCancelled { loadingFailed = true } }
     }
 }

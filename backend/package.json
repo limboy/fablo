@@ -1,0 +1,17 @@
+{
+  "name": "fablo-backend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/server.ts",
+    "start": "bun src/server.ts",
+    "test": "bun test",
+    "test:pm2": "bun tests/smoke-pm2.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": { "bun": ">=1.3.0" },
+  "devDependencies": {
+    "@types/bun": "^1.3.0",
+    "typescript": "^5.9.3"
+  }
+}

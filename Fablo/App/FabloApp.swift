@@ -1,4 +1,3 @@
-import SwiftData
 import SwiftUI
 
 @main
@@ -13,6 +12,5 @@ struct FabloApp: App {
                 .environment(player)
                 .tint(Theme.accent)
         }
-        .modelContainer(for: Story.self)
     }
 }

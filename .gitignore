@@ -1,4 +1,9 @@
 Fablo/Services/Secrets.swift
-*.xcodeproj/xcuserdata
+xcuserdata/
 build/
 .DS_Store
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend/data/
+backend/node_modules/
