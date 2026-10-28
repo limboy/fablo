@@ -78,6 +78,7 @@ enum StoryGenre: String, CaseIterable, Identifiable {
     case news = "新闻报道"
     case dialogue = "对话"
     case talk = "演讲"
+    case sentences = "句子"
 
     var id: String { rawValue }
 
@@ -97,6 +98,7 @@ enum StoryGenre: String, CaseIterable, Identifiable {
         case .news: "newspaper.fill"
         case .dialogue: "bubble.left.and.bubble.right.fill"
         case .talk: "mic.fill"
+        case .sentences: "text.quote"
         }
     }
 }

@@ -2,7 +2,7 @@ export class APIError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
 
-export const genres = ["日常生活", "童话寓言", "奇幻冒险", "科幻", "悬疑推理", "旅行见闻", "美食", "校园", "职场", "历史人物", "自然科普", "新闻报道", "对话", "演讲"];
+export const genres = ["日常生活", "童话寓言", "奇幻冒险", "科幻", "悬疑推理", "旅行见闻", "美食", "校园", "职场", "历史人物", "自然科普", "新闻报道", "对话", "演讲", "句子"];
 export const levels = { en: ["A1", "A2", "B1", "B2", "C1"], ja: ["N5", "N4", "N3", "N2", "N1"] };
 export const roles = ["topic", "subject", "object", "predicate", "complement", "modifier", "adverbial", "connector", "other"];
 export const partsOfSpeech = ["noun", "pronoun", "verb", "adjective", "adverb", "particle", "auxiliary", "conjunction", "determiner", "preposition", "interjection", "number", "punctuation", "other"];

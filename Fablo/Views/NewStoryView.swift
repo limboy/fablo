@@ -61,12 +61,18 @@ struct NewStoryView: View {
                     }
 
                     section("篇幅") {
-                        Picker("篇幅", selection: $lengthRaw) {
-                            ForEach(StoryLength.allCases) { length in
-                                Text("\(length.label) · 约\(length.sentenceCount)句").tag(length.rawValue)
+                        if genreRaw == StoryGenre.sentences.rawValue {
+                            Text("约 10 个独立句子，比所选难度略难一点")
+                                .font(.footnote)
+                                .foregroundStyle(Theme.muted)
+                        } else {
+                            Picker("篇幅", selection: $lengthRaw) {
+                                ForEach(StoryLength.allCases) { length in
+                                    Text("\(length.label) · 约\(length.sentenceCount)句").tag(length.rawValue)
+                                }
                             }
+                            .pickerStyle(.segmented)
                         }
-                        .pickerStyle(.segmented)
                     }
 
                     section("主题（可选）") {

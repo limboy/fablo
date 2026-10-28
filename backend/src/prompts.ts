@@ -18,6 +18,7 @@ export const storySystem = `你是一位为中文母语者编写外语阅读材�
 - 词汇和语法严格符合指定难度；内容有趣、完整、有画面感。日语 N5/N4 只使用最基础的汉字，其余写成假名。
 - 「对话」类型：用引号呈现人物对白，每句台词作为独立句子。「新闻报道」类型：使用新闻文体。
 - 「演讲」类型：写成 TED 风格的演讲稿。演讲者用第一人称直接对台下听众说话（可以向听众提问）；开头用一个问题或小故事抓住注意力，全篇围绕一个清晰的核心观点，穿插个人经历或具体例子，结尾回扣主题并给听众一个启发或行动建议。title 用演讲标题。coverPrompt 描述与演讲主题相关的画面，而不是演讲舞台。
+- 「句子」类型：不写连贯短文，而是写约 10 个互相独立的单句，每句单独成为一个自然段（不受下面 2-4 段的限制）。按 N+1 原则出题：核心词汇在指定难度内，但每句都比该难度的典型句子更长、更有挑战——用定语从句、名词修饰、复句或该难度刚学到/略高一级的句型把信息串起来（例如 N5：「去年の夏に会った人にもう一度会いたいです。」「日本の習慣についてよく知っている外国人を探しています。」，仅示意难度，不要照抄）。每句语法重点和场景都不同，内容自然实用。title 概括这组句子的主题或重点句型，coverPrompt 描述其中一句的画面。
 - 分成 2-4 个自然段。
 - 日语句子 text 必须与所有词的 s 依次拼接后完全一致。英语 text 保留自然空格，词之间的空格不放进 s，标点作为独立词。
 
@@ -41,8 +42,13 @@ export function storyUser(r: GenerationRequest, existing: StoryRecord[]): string
   let user = `目标语言：${r.language === "ja" ? "日语" : "英语"}
 难度：${r.level}（${levelSummaries[r.level]}）
 类型：${r.genre}
-篇幅：约 ${{ short: 6, medium: 12, long: 20 }[r.length]} 句
+篇幅：约 ${r.genre === "句子" ? 10 : { short: 6, medium: 12, long: 20 }[r.length]} 句
 主题：${r.topic || "自由发挥，选一个新鲜有趣的切入点"}`;
+  if (r.genre === "句子") {
+    const seen = existing.filter(s => s.genre === "句子" && s.language === r.language).flatMap(s => sentences(s.content).map(s => s.text));
+    if (seen.length) return user + "\n\n学习者已经练习过下面这些句子。新句子不要重复或改写它们，换用不同的语法点、词汇和场景：\n" + seen.map(t => `- ${t}`).join("\n");
+    return user;
+  }
   if (existing.length) user += "\n\n学习者已经读过下面这些短文。请避开相同或相似的题材、主角、情节和场景，写一篇明显不同的新故事（如果指定了主题，就在该主题下换一个新的角度）：\n" + existing.map(s => `- ${s.content.title}（${s.content.titleZh}）：${s.content.summaryZh}`).join("\n");
   return user;
 }
@@ -63,6 +69,8 @@ export function analysisPrompt(story: StoryRecord, index: number): { system: str
 export function speechInstructions(story: StoryRecord): string {
   const pace = ["A1", "A2", "N5", "N4"].includes(story.level) ? "slowly and very clearly" : "at a natural, relaxed pace";
   const accent = story.language === "ja" ? "in standard Tokyo Japanese" : "in clear standard English";
-  const style = story.genre === "演讲" ? "Deliver it like a warm, engaging speaker giving a TED-style talk to a live audience" : "Read this story aloud like an audiobook narrator";
+  const style = story.genre === "演讲" ? "Deliver it like a warm, engaging speaker giving a TED-style talk to a live audience"
+    : story.genre === "句子" ? "Read these independent example sentences aloud like a language teacher, one at a time"
+    : "Read this story aloud like an audiobook narrator";
   return `${style}, ${accent}, ${pace}, for language learners. Pause briefly between sentences and a little longer between paragraphs.`;
 }
