@@ -214,7 +214,7 @@ private struct LibraryEntryCard: View {
                         if let request = entry.request?.storyRequest {
                             Text("\(request.language.nativeName) · \(request.level.name)")
                                 .font(.subheadline.weight(.semibold))
-                            Text(request.genre == .sentences ? "句子 · 约10句" : "\(request.genre.rawValue) · \(request.length.label)")
+                            Text("\(request.genre.rawValue) · \(request.length.label)")
                                 .font(.caption).foregroundStyle(Theme.muted)
                             if !request.topic.isEmpty {
                                 Text(request.topic).font(.caption).foregroundStyle(Theme.muted).lineLimit(2)

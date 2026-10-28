@@ -6,7 +6,7 @@ AI-generated reading practice for Chinese speakers learning English or Japanese.
 
 ## Features
 
-- **Stories at your level** — English (CEFR A1–C1) or Japanese (JLPT N5–N1), in 15 genres from everyday life and fables to news reports, dialogues and TED-style talks, plus a 句子 set of about 10 standalone sentences pitched slightly above your level (N+1) that avoids sentences you have already practised. Short, medium or long (about 6 / 12 / 20 sentences), with an optional topic.
+- **Stories at your level** — English (CEFR A1–C1) or Japanese (JLPT N5–N1), in 15 genres from everyday life and fables to news reports, dialogues and TED-style talks, plus 句子 sets of standalone sentences pitched slightly above your level (N+1) that avoid sentences you have already practised. Short, medium or long (about 6 / 12 / 20 sentences), with an optional topic.
 - **Fresh every time** — new stories are steered away from themes already in your library.
 - **Annotated sentences** — each sentence is split into grammatical chunks (subject, predicate, object, …) with per-word part of speech, Chinese gloss, and for Japanese, furigana and romaji. Every sentence has a Chinese translation.
 - **Sentence analysis** — tap a sentence for an explanation of its structure, grammar points with new examples, key vocabulary (IPA or kana readings) and nuance notes.
