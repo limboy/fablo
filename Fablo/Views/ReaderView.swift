@@ -189,7 +189,11 @@ struct ReaderView: View {
     private func play(from id: Int, continuous: Bool) {
         guard let content else { return }
         player.play(StoryAudioSource(story: story, content: content), from: id, rate: speechRate,
-                    continuous: continuous, looping: loopPlayback)
+                    continuous: continuous, looping: loopPlayback) {
+            Task { [story] in try? await story.recordListen() }
+            // Finished (not looping): the next play should be a full listen again, not start at the last sentence.
+            if !isPlayingThisStory { selectedID = nil }
+        }
     }
 
     // MARK: Chrome
@@ -308,7 +312,7 @@ struct ReaderView: View {
     private var statusSubtitle: String {
         if let error = player.errorMessage { return error }
         let count = content?.allSentences.count ?? 0
-        return "\(count) 句"
+        return story.listenCount > 0 ? "\(count) 句 · 已听 \(story.listenCount) 遍" : "\(count) 句"
     }
 }
 

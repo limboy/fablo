@@ -14,7 +14,7 @@ const equals = (a: string, b: string) => timingSafeEqual(Buffer.from(hash(a)), B
 const json = (value: unknown, status = 200) => Response.json(value, { status });
 const summary = (story: StoryRecord) => {
   const { content, analyses, importedFrom, ...metadata } = story;
-  return { ...metadata, generationRequest: story.generationRequest ?? null, readingStatus: story.readingStatus ?? "unread", readingStatusRevision: story.readingStatusRevision ?? 0, title: content.title, titleZh: content.titleZh, summaryZh: content.summaryZh, coverPrompt: content.coverPrompt };
+  return { ...metadata, generationRequest: story.generationRequest ?? null, readingStatus: story.readingStatus ?? "unread", readingStatusRevision: story.readingStatusRevision ?? 0, listenCount: story.listenCount ?? 0, title: content.title, titleZh: content.titleZh, summaryZh: content.summaryZh, coverPrompt: content.coverPrompt };
 };
 const detail = (story: StoryRecord) => ({ ...summary(story), content: story.content, analyses: story.analyses, ...(story.importedFrom ? { importedFrom: story.importedFrom } : {}) });
 const sessionCookie = (request: Request): string | null => request.headers.get("cookie")?.split(";").map(v => v.trim()).find(v => v.startsWith("fablo_session="))?.slice("fablo_session=".length) ?? null;
@@ -140,6 +140,7 @@ export function createHandler(config: Config, store: Store) {
         if (status !== "unread" && status !== "reading" && status !== "read") throw new APIError(400, "无效的阅读状态");
         return json(summary(store.setReadingStatus(id, status)));
       }
+      if (action === "listens" && method === "POST") return json(summary(store.addListen(id)));
       if (!action && method === "DELETE") {
         store.deleteStory(id);
         // UUID directories are controlled by the server; never use a caller-supplied path.

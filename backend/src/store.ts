@@ -3,8 +3,8 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { APIError, type AssetStatus, type GenerationRequest, type Job, type JobKind, type ReadingStatus, type StoryRecord } from "./types";
 
-interface StoryRow { document: string; reading_status: ReadingStatus | null; reading_revision: number | null }
-const storySelect = "SELECT s.document, r.status AS reading_status, r.revision AS reading_revision FROM stories s LEFT JOIN reading_states r ON r.story_id=s.id";
+interface StoryRow { document: string; reading_status: ReadingStatus | null; reading_revision: number | null; listen_count: number | null }
+const storySelect = "SELECT s.document, r.status AS reading_status, r.revision AS reading_revision, l.count AS listen_count FROM stories s LEFT JOIN reading_states r ON r.story_id=s.id LEFT JOIN listen_counts l ON l.story_id=s.id";
 
 interface JobRow {
   id: string; kind: JobKind; story_id: string; status: Job["status"]; payload: string;
@@ -24,6 +24,7 @@ export class Store {
     this.db.run(`
       CREATE TABLE IF NOT EXISTS stories (id TEXT PRIMARY KEY, document TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS reading_states (story_id TEXT PRIMARY KEY, status TEXT NOT NULL CHECK(status IN ('unread','reading','read')), revision INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS listen_counts (story_id TEXT PRIMARY KEY, count INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS jobs (
         id TEXT PRIMARY KEY, kind TEXT NOT NULL, story_id TEXT NOT NULL, status TEXT NOT NULL,
         payload TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
@@ -53,7 +54,7 @@ export class Store {
   }
   close() { this.db.close(); }
   private story(row: StoryRow): StoryRecord {
-    return { ...JSON.parse(row.document), readingStatus: row.reading_status ?? "unread", readingStatusRevision: row.reading_revision ?? 0 };
+    return { ...JSON.parse(row.document), readingStatus: row.reading_status ?? "unread", readingStatusRevision: row.reading_revision ?? 0, listenCount: row.listen_count ?? 0 };
   }
   getStory(id: string): StoryRecord | null {
     const row = this.db.query<StoryRow, [string]>(`${storySelect} WHERE s.id=?`).get(id);
@@ -76,13 +77,14 @@ export class Store {
       this.db.query("UPDATE jobs SET status='completed',lease_owner=NULL,lease_until=NULL,error=NULL WHERE story_id=?").run(id);
       this.db.query("DELETE FROM stories WHERE id=?").run(id);
       this.db.query("DELETE FROM reading_states WHERE story_id=?").run(id);
+      this.db.query("DELETE FROM listen_counts WHERE story_id=?").run(id);
     }).immediate();
   }
   owns(job: ClaimedJob): boolean {
     return !!this.db.query("SELECT id FROM jobs WHERE id=? AND lease_owner=? AND status='running' AND lease_until>?").get(job.id, job.leaseOwner, Date.now());
   }
   saveStory(story: StoryRecord) {
-    const { readingStatus, readingStatusRevision, ...document } = story;
+    const { readingStatus, readingStatusRevision, listenCount, ...document } = story;
     this.db.query("INSERT INTO stories VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET document=excluded.document, updated_at=excluded.updated_at")
       .run(story.id, JSON.stringify(document), story.createdAt, story.updatedAt);
   }
@@ -94,6 +96,15 @@ export class Store {
       this.db.query("UPDATE settings SET value=value+1 WHERE key='revision'").run();
       this.db.query("INSERT INTO reading_states VALUES (?,?,?) ON CONFLICT(story_id) DO UPDATE SET status=excluded.status,revision=excluded.revision")
         .run(id, status, this.revision());
+      return this.getStory(id)!;
+    }).immediate();
+  }
+  /** Records one complete listen of the story's narration. */
+  addListen(id: string): StoryRecord {
+    return this.db.transaction(() => {
+      if (!this.getStory(id)) throw new APIError(404, "短文不存在");
+      this.db.query("INSERT INTO listen_counts VALUES (?,1) ON CONFLICT(story_id) DO UPDATE SET count=count+1").run(id);
+      this.db.query("UPDATE settings SET value=value+1 WHERE key='revision'").run();
       return this.getStory(id)!;
     }).immediate();
   }

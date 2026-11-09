@@ -25,7 +25,7 @@ export interface StoryRecord {
   content: StoryContent; analyses: Record<string, Analysis>;
   coverStatus: AssetStatus; audioStatus: AssetStatus;
   coverVersion: string | null; audioVersion: string | null;
-  readingStatus?: ReadingStatus; readingStatusRevision?: number;
+  readingStatus?: ReadingStatus; readingStatusRevision?: number; listenCount?: number;
   importedFrom?: { format: string; id: string; checksum: string; metadata: Record<string, unknown> };
 }
 export interface Timeline {

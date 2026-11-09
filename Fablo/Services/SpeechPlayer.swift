@@ -26,6 +26,8 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
     private var rate: Double = 1
     /// Restart full-story playback from the beginning when it reaches the end.
     private var looping = false
+    /// Called each time full-story playback started from the first sentence reaches the end.
+    private var onListenComplete: (@MainActor () -> Void)?
     private var nowPlaying: [String: Any] = [:]
     private var loadTask: Task<Void, Never>?
     private var tickTask: Task<Void, Never>?
@@ -40,10 +42,13 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
     }
 
     /// Plays from `sentence`; reads to the end when `continuous`, otherwise just that sentence.
-    func play(_ source: StoryAudioSource, from sentence: Int, rate: Double, continuous: Bool, looping: Bool = false) {
+    /// `onListenComplete` fires for every full pass through the story (from its first sentence).
+    func play(_ source: StoryAudioSource, from sentence: Int, rate: Double, continuous: Bool, looping: Bool = false,
+              onListenComplete: (@MainActor () -> Void)? = nil) {
         stop()
         self.rate = rate
         self.looping = looping
+        self.onListenComplete = continuous ? onListenComplete : nil
         storyID = source.storyID
         currentID = sentence
         isPlayingAll = continuous
@@ -136,6 +141,7 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
         }
         // Looped back to the beginning of the story.
         if time + 1 < lastTime {
+            if startSentence == 0 { onListenComplete?() }
             startSentence = 0
             updateNowPlayingProgress()
         }
@@ -160,6 +166,7 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
         isLoading = false
         isPlayingAll = false
         isPaused = false
+        onListenComplete = nil
         nowPlaying = [:]
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     }
@@ -219,7 +226,10 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
 
     nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         Task { @MainActor in
-            if self.player === player { self.stop() }
+            guard self.player === player else { return }
+            let completed = flag && self.isPlayingAll && self.startSentence == 0 ? self.onListenComplete : nil
+            self.stop()
+            completed?()
         }
     }
 

@@ -127,6 +127,7 @@ All other `/v1` routes require `Authorization: Bearer <FABLO_API_TOKEN>` or a va
 | GET | `/v1/stories/{id}` | Metadata, `content` and cached `analyses` |
 | GET | `/v1/stories/{id}/status` | Summary including asset states and versions |
 | POST | `/v1/stories/{id}/reading-status` | `{ "status": "unread" \| "reading" \| "read" }` → updated story summary; requires auth |
+| POST | `/v1/stories/{id}/listens` | records one complete listen of the narration → updated story summary; requires auth |
 | DELETE | `/v1/stories/{id}` | Delete from the shared library and invalidate its jobs |
 | POST | `/v1/stories/{id}/cover` | Queue cover regeneration |
 | POST | `/v1/stories/{id}/audio` | Queue audio regeneration |
@@ -148,6 +149,8 @@ Browser readers can call these endpoints with ordinary `fetch` requests and no c
 ### Reading boards
 
 Stories start in `unread` (待读); clients can move them to `reading` (在读), `read` (已读), or back to either state. The state belongs to the shared server library, so devices connected to the same server see the same boards after refresh. Story listings, detail and status responses include `readingStatus` and `readingStatusRevision`; the latter increases with successful state changes and protects clients from stale responses. Repeating the current state is a no-op.
+
+Each story also carries `listenCount`: how many times its whole narration has been played to the end, starting from the first sentence. The app posts to `/listens` after each such playthrough (every pass counts when looping). The count is shared across devices and removed with the story.
 
 Reading state is stored separately in SQLite so cover/audio generation and late story writes cannot overwrite it. Updates advance the library revision for consistent pagination and never enqueue AI jobs. Existing stories default to `unread`; the new table is created automatically on startup. Deploy and restart the backend before using the new iOS menus. The app caches synchronized states for offline viewing and reports failed updates without moving the story to another board.
 

@@ -92,7 +92,7 @@ describe("API and persistent jobs", () => {
       ["GET", "/v1/jobs"], ["GET", `/v1/jobs/${job.id}`],
       ["POST", `/v1/jobs/${job.id}/retry`], ["DELETE", `/v1/jobs/${job.id}`],
       ["DELETE", `/v1/stories/${story.id}`],
-      ...["cover", "audio", "analyses/0", "analyses/1", "assets/cover", "reading-status"].map(action => ["POST", `/v1/stories/${story.id}/${action}`]),
+      ...["cover", "audio", "analyses/0", "analyses/1", "assets/cover", "reading-status", "listens"].map(action => ["POST", `/v1/stories/${story.id}/${action}`]),
     ];
     for (const [method, path] of protectedRoutes) {
       expect((await call(path!, { method }, false)).status).toBe(401);
@@ -179,6 +179,38 @@ describe("API and persistent jobs", () => {
     expect(store.db.query("SELECT * FROM reading_states WHERE story_id=?").get(story.id)).toBeNull();
     store.saveStory(story);
     expect(store.getStory(story.id)?.readingStatus).toBe("unread");
+  });
+
+  test("listen counts are shared across clients, survive restarts and are removed with the story", async () => {
+    const { call, post, store, settings } = environment(), story = record(), other = record();
+    store.saveStory(story); store.saveStory(other);
+    const path = `/v1/stories/${story.id}/listens`;
+    expect((await (await call(`/v1/stories/${story.id}`, {}, false)).json()).listenCount).toBe(0);
+    for (const expected of [1, 2, 3]) {
+      const revision = store.revision();
+      const response = await post(path, {});
+      expect(response.status).toBe(200);
+      const updated = await response.json();
+      expect(updated.listenCount).toBe(expected);
+      expect(updated.updatedAt).toBe(story.updatedAt);
+      expect(store.revision()).toBeGreaterThan(revision);
+    }
+    const listing = await (await call("/v1/stories", {}, false)).json() as { stories: StoryRecord[] };
+    expect(listing.stories.find(s => s.id === story.id)!.listenCount).toBe(3);
+    expect(listing.stories.find(s => s.id === other.id)!.listenCount).toBe(0);
+    const reopened = new Store(settings.dataDir);
+    try { expect(reopened.getStory(story.id)?.listenCount).toBe(3); }
+    finally { reopened.close(); }
+    const cached = store.getStory(story.id)!;
+    cached.listenCount = 0;
+    store.saveStory(cached);
+    expect(store.getStory(story.id)?.listenCount).toBe(3);
+    const raw = store.db.query<{ document: string }, [string]>("SELECT document FROM stories WHERE id=?").get(story.id)!;
+    expect(JSON.parse(raw.document).listenCount).toBeUndefined();
+    expect((await post(`/v1/stories/${crypto.randomUUID()}/listens`, {})).status).toBe(404);
+    expect((await call(`/v1/stories/${story.id}`, { method: "DELETE" })).status).toBe(204);
+    expect(store.db.query("SELECT * FROM listen_counts WHERE story_id=?").get(story.id)).toBeNull();
+    expect(store.listJobs()).toEqual([]);
   });
 
   test("generation is idempotent across connections and rejects changed payloads", async () => {

@@ -9,6 +9,8 @@ final class Story: Identifiable, Hashable {
     private(set) var readingStatus: ReadingStatus
     private(set) var isUpdatingReadingStatus = false
     private var readingStatusRevision: Int
+    /// How many times the whole narration has been listened to, across all devices.
+    private(set) var listenCount: Int
     private(set) var createdAt: Date
     private(set) var updatedAt: String
     private(set) var language: StoryLanguage
@@ -31,6 +33,7 @@ final class Story: Identifiable, Hashable {
         self.client = client
         readingStatus = record.readingStatus ?? .unread
         readingStatusRevision = record.readingStatusRevision ?? 0
+        listenCount = record.listenCount ?? 0
         createdAt = Self.date(record.createdAt)
         updatedAt = record.updatedAt
         language = record.language
@@ -53,6 +56,8 @@ final class Story: Identifiable, Hashable {
             readingStatus = record.readingStatus ?? .unread
             readingStatusRevision = record.readingStatusRevision ?? 0
         }
+        // The count only grows; ignore older snapshots (e.g. from the local cache).
+        listenCount = max(listenCount, record.listenCount ?? 0)
         guard record.updatedAt >= updatedAt else { restoreCachedDetails(record); return }
         createdAt = Self.date(record.createdAt)
         updatedAt = record.updatedAt
@@ -90,6 +95,11 @@ final class Story: Identifiable, Hashable {
         isUpdatingReadingStatus = true
         defer { isUpdatingReadingStatus = false }
         apply(try await client.setReadingStatus(status, for: id))
+    }
+
+    @MainActor
+    func recordListen() async throws {
+        apply(try await client.recordListen(for: id))
     }
 
     static func date(_ value: String) -> Date {

@@ -174,6 +174,9 @@ struct StoryCard: View {
                     if let request = story.generationRequest {
                         TagLabel(text: request.length.label)
                     }
+                    if story.listenCount > 0 {
+                        TagLabel(text: "\(story.listenCount) 遍", systemImage: "headphones")
+                    }
                     Spacer()
                     Text(story.createdAt, format: .dateTime.month().day())
                         .font(.caption)
