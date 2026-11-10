@@ -17,6 +17,8 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
     private(set) var isPlayingAll = false
     private(set) var isPaused = false
     private(set) var errorMessage: String?
+    /// True during the silence between two passes of a repeated sentence.
+    private var isInRepeatGap = false
 
     private var player: AVAudioPlayer?
     private var timeline: StoryAudioTimeline?
@@ -24,6 +26,9 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
     private var startSentence = 0
     private var lastTime: Double = 0
     private var rate: Double = 1
+    /// Silence between repeated passes of a sentence, in seconds.
+    static let repeatGap: Double = 3
+    private var gapEnd: Date?
     /// Restart full-story playback from the beginning when it reaches the end.
     private var looping = false
     /// Called each time full-story playback started from the first sentence reaches the end.
@@ -41,7 +46,8 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
         )
     }
 
-    /// Plays from `sentence`; reads to the end when `continuous`, otherwise just that sentence.
+    /// Plays from `sentence`; reads to the end when `continuous`, otherwise repeats just that sentence,
+    /// with a pause between passes, until stopped.
     /// `onListenComplete` fires for every full pass through the story (from its first sentence).
     func play(_ source: StoryAudioSource, from sentence: Int, rate: Double, continuous: Bool, looping: Bool = false,
               onListenComplete: (@MainActor () -> Void)? = nil) {
@@ -78,6 +84,8 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
     func pause() {
         // Nothing to hold on to yet while the narration is still being prepared.
         guard let player, !isLoading else { return stop() }
+        // Paused in the silence between passes: resuming starts the next pass right away.
+        if isInRepeatGap { endRepeatGap(play: false) }
         player.pause()
         isPaused = true
         updateNowPlayingProgress()
@@ -133,10 +141,14 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
 
     private func tick() {
         guard let player, let timeline else { return }
+        if isInRepeatGap {
+            if !isPaused, let gapEnd, Date() >= gapEnd { endRepeatGap(play: true) }
+            return
+        }
         let time = player.currentTime
         // Ticks are ~40ms apart; stop on the tick that would otherwise overshoot.
         if let stopTime, time + 0.04 * rate >= stopTime {
-            stop()
+            beginRepeatGap()
             return
         }
         // Looped back to the beginning of the story.
@@ -153,6 +165,28 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
         if currentWord != word { currentWord = word }
     }
 
+    private func beginRepeatGap() {
+        guard let player else { return }
+        player.pause()
+        gapEnd = Date().addingTimeInterval(Self.repeatGap)
+        isInRepeatGap = true
+        currentWord = nil
+    }
+
+    /// Rewinds to the sentence for its next pass.
+    private func endRepeatGap(play: Bool) {
+        guard let player, let timeline else { return }
+        isInRepeatGap = false
+        gapEnd = nil
+        player.currentTime = timeline.clipStart(startSentence)
+        lastTime = player.currentTime
+        if play {
+            player.rate = Float(rate)
+            player.play()
+        }
+        updateNowPlayingProgress()
+    }
+
     private func reset() {
         loadTask = nil
         tickTask?.cancel()
@@ -166,6 +200,8 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
         isLoading = false
         isPlayingAll = false
         isPaused = false
+        isInRepeatGap = false
+        gapEnd = nil
         onListenComplete = nil
         nowPlaying = [:]
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil

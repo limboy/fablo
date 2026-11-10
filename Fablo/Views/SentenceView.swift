@@ -291,7 +291,7 @@ struct SentenceView: View {
             if isSelected {
                 HStack(spacing: 10) {
                     Button(action: onPlay) {
-                        Label(isSpeaking && !isPaused ? "停止" : "朗读", systemImage: isSpeaking && !isPaused ? "stop.fill" : "speaker.wave.2.fill")
+                        PlayStopLabel(isPlaying: isSpeaking && !isPaused)
                     }
                     .buttonStyle(.bordered)
                     Button(action: onAnalyze) {
@@ -324,6 +324,23 @@ struct SentenceView: View {
                 .presentationDetents([.height(220)])
         }
         .animation(.snappy(duration: 0.25), value: isSelected)
+    }
+}
+
+/// 朗读 / 停止 for a sentence play button. Both icons are always laid out (one hidden),
+/// so the button keeps the same size when it switches.
+struct PlayStopLabel: View {
+    let isPlaying: Bool
+
+    var body: some View {
+        Label {
+            Text(isPlaying ? "停止" : "朗读")
+        } icon: {
+            ZStack {
+                Image(systemName: "speaker.wave.2.fill").opacity(isPlaying ? 0 : 1)
+                Image(systemName: "stop.fill").opacity(isPlaying ? 1 : 0)
+            }
+        }
     }
 }
 

@@ -69,7 +69,7 @@ struct AnalysisView: View {
                                 rate: speechRate, continuous: false)
                 }
             } label: {
-                Label(isPlayingThis ? "停止" : "朗读", systemImage: isPlayingThis ? "stop.fill" : "speaker.wave.2.fill")
+                PlayStopLabel(isPlaying: isPlayingThis)
             }
             .buttonStyle(.bordered)
             .buttonBorderShape(.capsule)
