@@ -12,6 +12,7 @@ struct AnalysisView: View {
     @State private var errorMessage: String?
 
     private var isSpeaking: Bool { player.storyID == story.id && player.currentID == ref.id }
+    private var isPlayingThis: Bool { isSpeaking && !player.isPaused }
 
     var body: some View {
         NavigationStack {
@@ -61,14 +62,14 @@ struct AnalysisView: View {
                 .font(.system(size: 16))
                 .foregroundStyle(Theme.muted)
             Button {
-                if isSpeaking {
+                if isPlayingThis {
                     player.stop()
                 } else {
                     player.play(StoryAudioSource(story: story, content: content), from: ref.id,
                                 rate: speechRate, continuous: false)
                 }
             } label: {
-                Label(isSpeaking ? "停止" : "朗读", systemImage: isSpeaking ? "stop.fill" : "speaker.wave.2.fill")
+                Label(isPlayingThis ? "停止" : "朗读", systemImage: isPlayingThis ? "stop.fill" : "speaker.wave.2.fill")
             }
             .buttonStyle(.bordered)
             .buttonBorderShape(.capsule)

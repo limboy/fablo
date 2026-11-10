@@ -162,6 +162,7 @@ struct ReaderView: View {
             options: options,
             isSelected: selectedID == ref.id,
             isSpeaking: speakingID == ref.id,
+            isPaused: player.isPaused,
             speakingWord: speakingID == ref.id ? player.currentWord : nil,
             showTranslation: showAllTranslations,
             onSelect: {
@@ -170,7 +171,7 @@ struct ReaderView: View {
                 }
             },
             onPlay: {
-                if speakingID == ref.id {
+                if speakingID == ref.id && !player.isPaused {
                     player.stop()
                 } else {
                     play(from: ref.id, continuous: false)

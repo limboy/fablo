@@ -261,6 +261,7 @@ struct SentenceView: View {
     let options: ReadingOptions
     let isSelected: Bool
     let isSpeaking: Bool
+    var isPaused = false
     var speakingWord: Int? = nil
     let showTranslation: Bool
     let onSelect: () -> Void
@@ -290,7 +291,7 @@ struct SentenceView: View {
             if isSelected {
                 HStack(spacing: 10) {
                     Button(action: onPlay) {
-                        Label(isSpeaking ? "停止" : "朗读", systemImage: isSpeaking ? "stop.fill" : "speaker.wave.2.fill")
+                        Label(isSpeaking && !isPaused ? "停止" : "朗读", systemImage: isSpeaking && !isPaused ? "stop.fill" : "speaker.wave.2.fill")
                     }
                     .buttonStyle(.bordered)
                     Button(action: onAnalyze) {
