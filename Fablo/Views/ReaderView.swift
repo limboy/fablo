@@ -5,6 +5,7 @@ struct ReaderView: View {
 
     @Environment(SpeechPlayer.self) private var player
     @Environment(StoryStudio.self) private var studio
+    @Environment(\.dismiss) private var dismiss
 
     @AppStorage("showFurigana") private var showFurigana = true
     @AppStorage("showRomaji") private var showRomaji = true
@@ -64,19 +65,25 @@ struct ReaderView: View {
         .background(Theme.paper.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
         #if os(macOS)
-        .toolbar(removing: .title)
-        #endif
+        // Same as the library: an in-content bar whose buttons line up with the cover's edges.
+        .navigationBarBackButtonHidden(true)
+        .toolbarVisibility(.hidden, for: .windowToolbar)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            HStack {
+                Button("返回", systemImage: "chevron.left") { dismiss() }
+                    .keyboardShortcut("[", modifiers: .command)
+                    .help("返回 (⌘[)")
+                Spacer()
+                settingsMenu.menuStyle(.button)
+            }
+            .macTopBarStyle(inset: 18)
+        }
+        #else
         .toolbar {
-            #if os(macOS)
-            // Mac places primary actions next to the back button; a flexible spacer in the same
-            // (automatic) section pushes the menus to the trailing edge instead.
-            ToolbarSpacer(.flexible, placement: .automatic)
-            ToolbarItem(placement: .automatic) { settingsMenu }
-            #else
             ToolbarItem(placement: .topBarTrailing) { ReadingStatusMenu(story: story) }
             ToolbarItem(placement: .topBarTrailing) { settingsMenu }
-            #endif
         }
+        #endif
         .safeAreaInset(edge: .bottom) { playbackBar }
         .sheet(item: $analysisTarget) { ref in
             if let content {
@@ -110,7 +117,8 @@ struct ReaderView: View {
                 .padding(.bottom, 8)
 
             Text(story.title)
-                .font(story.language == .ja ? .system(size: 28, weight: .bold) : .system(size: 30, weight: .bold, design: .serif))
+                .font(.system(size: story.language == .ja ? 28 : 30, weight: .bold))
+                .kerning(story.language == .ja ? 0 : -0.6)
                 .foregroundStyle(Theme.ink)
             Text(story.titleZh)
                 .font(.title3)
@@ -119,19 +127,14 @@ struct ReaderView: View {
                 TagLabel(text: "\(story.language.code) · \(story.level)")
                 TagLabel(text: story.genre, systemImage: story.genreSymbol)
             }
-            if !story.summaryZh.isEmpty {
-                Text(story.summaryZh)
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.muted)
-                    .padding(.top, 2)
-            }
-            Text("点击句子查看翻译与成分，点击「解析」看详细讲解")
-                .font(.caption)
-                .foregroundStyle(Theme.muted.opacity(0.8))
-                .padding(.top, 6)
         }
         .padding(.horizontal, 6)
+        #if os(macOS)
+        // The gap below the top bar matches the side margin (12 + 6).
+        .padding(.top, 18)
+        #else
         .padding(.top, 8)
+        #endif
         .padding(.bottom, 30)
     }
 

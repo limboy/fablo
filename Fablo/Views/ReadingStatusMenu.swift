@@ -12,18 +12,32 @@ struct ReadingStatusMenu: View {
                 showingError = true
             }
         } label: {
+            #if os(macOS)
+            // Same grey capsule as the sentence 朗读 / 解析 buttons.
+            HStack(spacing: 6) {
+                Label(story.readingStatus.title, systemImage: story.readingStatus.systemImage)
+                if story.isUpdatingReadingStatus { ProgressView().controlSize(.mini) }
+            }
+            .font(.subheadline.weight(.semibold))
+            #else
             HStack(spacing: 6) {
                 Label(story.readingStatus.title, systemImage: story.readingStatus.systemImage)
                 if story.isUpdatingReadingStatus { ProgressView().controlSize(.mini) }
                 else { Image(systemName: "chevron.down").font(.caption2.weight(.semibold)) }
             }
             .font(.subheadline.weight(.medium))
-            #if os(iOS)
             .frame(minHeight: 44)
-            #endif
             .contentShape(.rect)
+            #endif
         }
-        // The label draws its own chevron; the Mac would add a second one.
+        #if os(macOS)
+        .menuStyle(.button)
+        .buttonStyle(.bordered)
+        .buttonBorderShape(.capsule)
+        .controlSize(.large)
+        .fixedSize()
+        #endif
+        // The label draws its own chevron on iPhone; the Mac would add another.
         .menuIndicator(.hidden)
         .accessibilityLabel("阅读状态，\(story.readingStatus.title)")
         .accessibilityHint("切换待读、在读或已读")

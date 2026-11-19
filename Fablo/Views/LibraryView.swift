@@ -43,6 +43,10 @@ struct LibraryView: View {
                     }
                 }
                 .padding(.horizontal, 16)
+                #if os(macOS)
+                // The gap below the top bar matches the side margin.
+                .padding(.top, 16)
+                #endif
                 .padding(.bottom, 40)
             }
             .background(Theme.paper.ignoresSafeArea())
@@ -53,39 +57,24 @@ struct LibraryView: View {
                 ReaderView(story: story)
             }
             #if os(macOS)
-            .toolbar(removing: .title)
-            #endif
+            // The window toolbar insets its items more than the cards; draw the bar in the content
+            // so the buttons line up with the cards' edges.
+            .toolbarVisibility(.hidden, for: .windowToolbar)
+            .safeAreaInset(edge: .top, spacing: 0) { macTopBar }
+            #else
             .toolbar {
-                #if os(iOS)
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("连接服务", systemImage: "gearshape") { showingBackendSettings = true }
+                    Button("连接服务", systemImage: "gearshape") { showBackendSettings() }
                 }
-                #endif
-                ToolbarItem(placement: .principal) {
-                    Picker("语言", selection: $filter) {
-                        ForEach(StoryLanguage.allCases) { language in
-                            Text(language.chineseName).tag(language)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    #if os(iOS)
-                    .frame(width: 160)
-                    #else
-                    .fixedSize()
-                    #endif
-                }
+                ToolbarItem(placement: .principal) { languagePicker.frame(width: 160) }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("新短文", systemImage: "plus") { showingNewStory = true }
-                        #if os(iOS)
                         .buttonStyle(.glassProminent)
                         .foregroundStyle(Theme.onAccent)
-                        #else
-                        .keyboardShortcut("n")
-                        .help("新短文")
-                        #endif
                         .disabled(!studio.isConfigured)
                 }
             }
+            #endif
             .sheet(isPresented: $showingNewStory) {
                 NewStoryView()
                     .macSheetFrame()
@@ -177,6 +166,58 @@ struct LibraryView: View {
         .padding(.top, 8)
     }
 
+    private var languagePicker: some View {
+        Picker("语言", selection: $filter) {
+            ForEach(StoryLanguage.allCases) { language in
+                Text(language.chineseName).tag(language)
+            }
+        }
+        .pickerStyle(.segmented)
+    }
+
+    #if os(macOS)
+    /// The language switch as the toolbar used to draw it: a glass capsule with a neutral pill
+    /// behind the selection (a plain segmented control would fill it with the black accent).
+    private var macLanguageSwitch: some View {
+        HStack(spacing: 2) {
+            ForEach(StoryLanguage.allCases) { language in
+                let selected = filter == language
+                Button {
+                    filter = language
+                } label: {
+                    Text(language.chineseName)
+                        .font(.system(size: 13, weight: selected ? .semibold : .regular))
+                        .foregroundStyle(Theme.ink)
+                        .padding(.horizontal, 14)
+                        .frame(height: 28)
+                        .background(selected ? Theme.ink.opacity(0.08) : .clear, in: Capsule())
+                        .contentShape(.capsule)
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(selected ? .isSelected : [])
+            }
+        }
+        .padding(4)
+        .glassEffect(.regular, in: .capsule)
+        .animation(.snappy(duration: 0.2), value: filter)
+    }
+
+    private var macTopBar: some View {
+        HStack {
+            Button("设置", systemImage: "gearshape") { showBackendSettings() }
+                .help("设置 (⌘,)")
+            Spacer()
+            macLanguageSwitch
+            Spacer()
+            Button("新短文", systemImage: "plus") { showingNewStory = true }
+                .keyboardShortcut("n")
+                .help("新短文 (⌘N)")
+                .disabled(!studio.isConfigured)
+        }
+        .macTopBarStyle(inset: 16)
+    }
+    #endif
+
     private func showBackendSettings() {
         #if os(macOS)
         openSettings()
@@ -213,19 +254,13 @@ struct StoryCard: View {
                 .clipped()
             VStack(alignment: .leading, spacing: 6) {
                 Text(story.title)
-                    .font(story.language == .ja ? .title3.weight(.bold) : .system(.title3, design: .serif, weight: .bold))
+                    .font(.title3.weight(.bold))
+                    .kerning(story.language == .ja ? 0 : -0.3)
                     .foregroundStyle(Theme.ink)
                     .lineLimit(2)
                 Text(story.titleZh)
-                    .font(.subheadline)
+                    .font(.callout)
                     .foregroundStyle(Theme.muted)
-                if let request = story.generationRequest, !request.topic.isEmpty {
-                    Text(request.topic)
-                        .font(.caption)
-                        .foregroundStyle(Theme.muted)
-                        .lineLimit(2)
-                        .padding(.top, 4)
-                }
                 HStack(spacing: 6) {
                     TagLabel(text: "\(story.language.code) · \(story.level)")
                     TagLabel(text: story.genre, systemImage: story.genreSymbol)
@@ -235,11 +270,11 @@ struct StoryCard: View {
                     if story.listenCount > 0 {
                         TagLabel(text: "\(story.listenCount) 遍", systemImage: "headphones")
                     }
-                    Spacer()
-                    Text(story.createdAt, format: .dateTime.month().day())
-                        .font(.caption)
-                        .foregroundStyle(Theme.muted)
+                    Spacer(minLength: 0)
+                    // Room for the reading status menu the library card lays over this row.
+                    Color.clear.frame(width: 84, height: 1)
                 }
+                .alignmentGuide(.tagRowCenter) { $0[VerticalAlignment.center] }
                 .padding(.top, 4)
             }
             .padding(16)
@@ -259,12 +294,11 @@ private struct LibraryEntryCard: View {
                         .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
-                HStack {
+                // Outside the link so choosing a status doesn't open the story; centered on the tag row.
+                .overlay(alignment: Alignment(horizontal: .trailing, vertical: .tagRowCenter)) {
                     ReadingStatusMenu(story: story)
-                    Spacer()
+                        .padding(.trailing, 16)
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 16)
             } else {
                 HStack(alignment: .top, spacing: 14) {
                     Image(systemName: entry.request?.storyRequest.genre.symbol ?? "sparkles")
@@ -360,4 +394,13 @@ private struct JobStatusRow: View {
             }
         }
     }
+}
+
+extension VerticalAlignment {
+    private enum TagRowCenter: AlignmentID {
+        static func defaultValue(in context: ViewDimensions) -> CGFloat { context[VerticalAlignment.center] }
+    }
+
+    /// The vertical center of a story card's tag row.
+    static let tagRowCenter = VerticalAlignment(TagRowCenter.self)
 }

@@ -62,6 +62,22 @@ extension PlatformColor {
     }
 }
 
+/// A filled accent capsule that keeps its fill when the window is inactive
+/// (the Mac greys out `.borderedProminent`, which would leave its onAccent label unreadable).
+struct AccentCapsuleButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(Theme.onAccent)
+            .padding(.horizontal, 14)
+            .frame(minHeight: 32)
+            .background(Theme.accent, in: Capsule())
+            .contentShape(.capsule)
+            .opacity(isEnabled ? (configuration.isPressed ? 0.75 : 1) : 0.4)
+    }
+}
+
 /// A small rounded tag used for level / genre / role labels.
 struct TagLabel: View {
     let text: String
@@ -73,7 +89,11 @@ struct TagLabel: View {
             if let systemImage { Image(systemName: systemImage).imageScale(.small) }
             Text(text)
         }
-        .font(.caption.weight(.medium))
+        #if os(macOS)
+        .font(.system(size: 12, weight: .medium))
+        #else
+        .font(.footnote.weight(.medium))
+        #endif
         .foregroundStyle(Theme.muted)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)

@@ -216,9 +216,17 @@ struct WordCell: View {
                     .fixedSize()
             }
             Text(word.surface)
-                .font(isJapanese ? .system(size: 20, weight: .bold) : .system(size: 18, weight: .medium, design: .serif))
-                .foregroundStyle(isActive ? Theme.accent : Theme.ink)
+                .font(isJapanese ? .system(size: 20, weight: .bold) : .system(size: 19, weight: .regular))
+                .foregroundStyle(Theme.ink)
                 .fixedSize()
+                // The accent is the same ink as the text, so mark the spoken word with a soft fill.
+                .background {
+                    if isActive {
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(Theme.ink.opacity(0.12))
+                            .padding(.horizontal, -2)
+                    }
+                }
                 .background(alignment: .bottom) {
                     if let underline {
                         RoundedRectangle(cornerRadius: 2)
@@ -297,12 +305,21 @@ struct SentenceView: View {
                     Button(action: onAnalyze) {
                         Label("解析", systemImage: "text.magnifyingglass")
                     }
+                    #if os(macOS)
+                    .buttonStyle(.bordered)
+                    #else
                     .buttonStyle(.borderedProminent)
                     .foregroundStyle(Theme.onAccent)
+                    #endif
                     Spacer()
                 }
                 .font(.subheadline.weight(.semibold))
+                #if os(macOS)
+                // Small Mac buttons are much shorter than on iPhone.
+                .controlSize(.large)
+                #else
                 .controlSize(.small)
+                #endif
                 .buttonBorderShape(.capsule)
             }
         }
