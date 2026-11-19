@@ -88,8 +88,7 @@ extension View {
     func macTopBarStyle(inset: CGFloat) -> some View {
         labelStyle(.iconOnly)
             .buttonStyle(MacGlassIconButtonStyle())
-            .padding(.top, 10)
-            .padding(.bottom, 8)
+            .padding(.vertical, 10)
             .padding(.horizontal, inset)
             .background {
                 Rectangle()
