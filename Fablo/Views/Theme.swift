@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 enum Theme {
     static let paper = Color(light: 0xF9F9F0, dark: 0x1C1C19)
@@ -35,13 +34,20 @@ enum Theme {
 
 extension Color {
     init(light: UInt32, dark: UInt32) {
+        #if os(macOS)
+        self.init(nsColor: NSColor(name: nil) { appearance in
+            let isDark = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            return NSColor(hex: isDark ? dark : light)
+        })
+        #else
         self.init(uiColor: UIColor { traits in
             UIColor(hex: traits.userInterfaceStyle == .dark ? dark : light)
         })
+        #endif
     }
 }
 
-extension UIColor {
+extension PlatformColor {
     convenience init(hex: UInt32) {
         self.init(
             red: CGFloat((hex >> 16) & 0xFF) / 255,

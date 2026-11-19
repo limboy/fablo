@@ -7,26 +7,48 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		00357276E754D50948F48AC1 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 687F969BB4789B0A9B6F6303 /* LibraryView.swift */; };
+		051EE5285A03998FBF770099 /* AnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EEDABEF9FC1B8B634D2B8EB /* AnalysisView.swift */; };
+		083AB75027DCE90B919CF26E /* Platform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42EDBEBB56A43068ACC50117 /* Platform.swift */; };
 		117D38F7B0AC736A1D0E2BF1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7CA770758DF9B935EFD3AE14 /* Assets.xcassets */; };
 		155A16C8E71730361CC1BC59 /* BackendClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6CDC3D280692DDADFEDBEF6 /* BackendClient.swift */; };
+		168AC1EF7635FFEC7D638D7B /* BackendClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6CDC3D280692DDADFEDBEF6 /* BackendClient.swift */; };
+		1757F73A4282D5C36EC2BA6B /* SentenceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5DE80F0DAA23C54495704A5 /* SentenceView.swift */; };
 		1E4A371B6B6A218FF863482B /* AnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EEDABEF9FC1B8B634D2B8EB /* AnalysisView.swift */; };
+		2C61B7F96D4521ED8F7EC916 /* BackendSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31D9A1EA981879E9590AA50C /* BackendSettingsView.swift */; };
+		2DF509B3EF6756B675A350D0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7CA770758DF9B935EFD3AE14 /* Assets.xcassets */; };
 		355609DEF46E671B2F069AE8 /* StoryAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B899E85E1FA70DB5973A5E1D /* StoryAudio.swift */; };
 		47DA18F4E700AD9F4578B936 /* Story.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89D470B222619FB890E3DD76 /* Story.swift */; };
 		4F203CEF68493C01C04119B1 /* BackendCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEAF422C14D7DE396B750694 /* BackendCache.swift */; };
 		52B7720FCDA4D79951AECA62 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A46D44646F63CC07E89E966 /* Theme.swift */; };
 		7007F73504FCA91A08BEBEDE /* BackendCredentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA22406E392073613376524A /* BackendCredentials.swift */; };
+		70D121B1422C2DC09AF3DDD7 /* StoryStudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51F28837549B54ECBD9997CA /* StoryStudio.swift */; };
+		758695D53C14C70184D82F80 /* Platform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42EDBEBB56A43068ACC50117 /* Platform.swift */; };
+		78D384B95958A1AB6093E707 /* NewStoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5E6027822DCEDB2E022C7F8 /* NewStoryView.swift */; };
+		8673C9B6396FFC8F123CB163 /* ReadingStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88E8DAA6D034D81C5B0A33C8 /* ReadingStatus.swift */; };
 		89945705202AF2D72E165C74 /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4B617DFD42B0127EF4A880E /* ReaderView.swift */; };
+		8F1478AC33072610A5772F78 /* SpeechPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6C2742B42A411A17C63C138 /* SpeechPlayer.swift */; };
+		8F373C92A55465969A7A898E /* FabloApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C8DB01715084EEE5A7E7B4 /* FabloApp.swift */; };
+		91BAC8C9727AFBCECA0D784A /* StoryContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FDE6F2BC149FA4C582819AB /* StoryContent.swift */; };
 		941261C2AEB3E9FE160B5EA4 /* LibraryEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 348A71C93E3D4F867FF43132 /* LibraryEntry.swift */; };
+		96C08DC3F89BD3CA9F7A32A7 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A46D44646F63CC07E89E966 /* Theme.swift */; };
 		A683595DD73F14CB9E298E2D /* StoryContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FDE6F2BC149FA4C582819AB /* StoryContent.swift */; };
+		A8DE4A8698789EEE1F7ABA6E /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4B617DFD42B0127EF4A880E /* ReaderView.swift */; };
+		AF30DCB89B556898AEC49045 /* ReadingStatusMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5A3737716794B180AFFA402 /* ReadingStatusMenu.swift */; };
+		BAD36F459FDAED1789ED7C93 /* BackendCredentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA22406E392073613376524A /* BackendCredentials.swift */; };
 		C167235394BA8D4EA41A53EB /* ReadingStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88E8DAA6D034D81C5B0A33C8 /* ReadingStatus.swift */; };
 		C312FD72CD4474431324F631 /* FabloApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C8DB01715084EEE5A7E7B4 /* FabloApp.swift */; };
 		CB178DEEE8115AC40BCAD949 /* StoryStudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51F28837549B54ECBD9997CA /* StoryStudio.swift */; };
 		CF09A75D98FC9AAEFA57AEF5 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 687F969BB4789B0A9B6F6303 /* LibraryView.swift */; };
 		D06F0C75D0CE5C88852F2537 /* SpeechPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6C2742B42A411A17C63C138 /* SpeechPlayer.swift */; };
 		D2D851C757E1FFC930546ED7 /* BackendSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31D9A1EA981879E9590AA50C /* BackendSettingsView.swift */; };
+		D99718EF2A94A47FCEBE06C9 /* BackendCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEAF422C14D7DE396B750694 /* BackendCache.swift */; };
+		DB33C75F797AA7F5B0B18D85 /* Story.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89D470B222619FB890E3DD76 /* Story.swift */; };
 		E19792ACBFD40430B8A49B9B /* ReadingStatusMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5A3737716794B180AFFA402 /* ReadingStatusMenu.swift */; };
 		E7FF366F32C285A0EC8DFD31 /* SentenceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5DE80F0DAA23C54495704A5 /* SentenceView.swift */; };
 		EE6CDC510C8753244F0BA226 /* NewStoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5E6027822DCEDB2E022C7F8 /* NewStoryView.swift */; };
+		FDE21656BC9C8F52887BB4D4 /* LibraryEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 348A71C93E3D4F867FF43132 /* LibraryEntry.swift */; };
+		FEE5DB6C249BFB45D025121F /* StoryAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B899E85E1FA70DB5973A5E1D /* StoryAudio.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,7 +57,9 @@
 		2FDE6F2BC149FA4C582819AB /* StoryContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryContent.swift; sourceTree = "<group>"; };
 		31D9A1EA981879E9590AA50C /* BackendSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendSettingsView.swift; sourceTree = "<group>"; };
 		348A71C93E3D4F867FF43132 /* LibraryEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryEntry.swift; sourceTree = "<group>"; };
+		42EDBEBB56A43068ACC50117 /* Platform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Platform.swift; sourceTree = "<group>"; };
 		51F28837549B54ECBD9997CA /* StoryStudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryStudio.swift; sourceTree = "<group>"; };
+		553975B9C97499590616B2B6 /* FabloMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FabloMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		59ECF81EDA5CE8AAF3615FF1 /* Fablo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Fablo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		687F969BB4789B0A9B6F6303 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		7CA770758DF9B935EFD3AE14 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -78,6 +102,7 @@
 			isa = PBXGroup;
 			children = (
 				59ECF81EDA5CE8AAF3615FF1 /* Fablo.app */,
+				553975B9C97499590616B2B6 /* FabloMac.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -86,6 +111,7 @@
 			isa = PBXGroup;
 			children = (
 				A1C8DB01715084EEE5A7E7B4 /* FabloApp.swift */,
+				42EDBEBB56A43068ACC50117 /* Platform.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -142,6 +168,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		1CBE31DA96FC91F520D1B2CC /* FabloMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A18758DD4A6A8D339B103CB4 /* Build configuration list for PBXNativeTarget "FabloMac" */;
+			buildPhases = (
+				1C680ED68A7E68C1F8121AEE /* Sources */,
+				CD807D1E4485F29BD1CBF4D8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FabloMac;
+			packageProductDependencies = (
+			);
+			productName = FabloMac;
+			productReference = 553975B9C97499590616B2B6 /* FabloMac.app */;
+			productType = "com.apple.product-type.application";
+		};
 		7A99039456743FF21CE69F45 /* Fablo */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 82C3D01E303BD9BE6EE3DE4E /* Build configuration list for PBXNativeTarget "Fablo" */;
@@ -169,6 +213,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					1CBE31DA96FC91F520D1B2CC = {
+						DevelopmentTeam = 5P9ZHW7578;
+						ProvisioningStyle = Automatic;
+					};
 					7A99039456743FF21CE69F45 = {
 						DevelopmentTeam = 5P9ZHW7578;
 						ProvisioningStyle = Automatic;
@@ -190,6 +238,7 @@
 			projectRoot = "";
 			targets = (
 				7A99039456743FF21CE69F45 /* Fablo */,
+				1CBE31DA96FC91F520D1B2CC /* FabloMac */,
 			);
 		};
 /* End PBXProject section */
@@ -203,9 +252,44 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CD807D1E4485F29BD1CBF4D8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2DF509B3EF6756B675A350D0 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		1C680ED68A7E68C1F8121AEE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				051EE5285A03998FBF770099 /* AnalysisView.swift in Sources */,
+				D99718EF2A94A47FCEBE06C9 /* BackendCache.swift in Sources */,
+				168AC1EF7635FFEC7D638D7B /* BackendClient.swift in Sources */,
+				BAD36F459FDAED1789ED7C93 /* BackendCredentials.swift in Sources */,
+				2C61B7F96D4521ED8F7EC916 /* BackendSettingsView.swift in Sources */,
+				8F373C92A55465969A7A898E /* FabloApp.swift in Sources */,
+				FDE21656BC9C8F52887BB4D4 /* LibraryEntry.swift in Sources */,
+				00357276E754D50948F48AC1 /* LibraryView.swift in Sources */,
+				78D384B95958A1AB6093E707 /* NewStoryView.swift in Sources */,
+				758695D53C14C70184D82F80 /* Platform.swift in Sources */,
+				A8DE4A8698789EEE1F7ABA6E /* ReaderView.swift in Sources */,
+				8673C9B6396FFC8F123CB163 /* ReadingStatus.swift in Sources */,
+				AF30DCB89B556898AEC49045 /* ReadingStatusMenu.swift in Sources */,
+				1757F73A4282D5C36EC2BA6B /* SentenceView.swift in Sources */,
+				8F1478AC33072610A5772F78 /* SpeechPlayer.swift in Sources */,
+				DB33C75F797AA7F5B0B18D85 /* Story.swift in Sources */,
+				FEE5DB6C249BFB45D025121F /* StoryAudio.swift in Sources */,
+				91BAC8C9727AFBCECA0D784A /* StoryContent.swift in Sources */,
+				70D121B1422C2DC09AF3DDD7 /* StoryStudio.swift in Sources */,
+				96C08DC3F89BD3CA9F7A32A7 /* Theme.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A73B953555D6F16BCF3AB578 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -219,6 +303,7 @@
 				941261C2AEB3E9FE160B5EA4 /* LibraryEntry.swift in Sources */,
 				CF09A75D98FC9AAEFA57AEF5 /* LibraryView.swift in Sources */,
 				EE6CDC510C8753244F0BA226 /* NewStoryView.swift in Sources */,
+				083AB75027DCE90B919CF26E /* Platform.swift in Sources */,
 				89945705202AF2D72E165C74 /* ReaderView.swift in Sources */,
 				C167235394BA8D4EA41A53EB /* ReadingStatus.swift in Sources */,
 				E19792ACBFD40430B8A49B9B /* ReadingStatusMenu.swift in Sources */,
@@ -282,10 +367,10 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
@@ -345,14 +430,36 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		3E9459A175C976A3A54C6A9D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = FabloMac/FabloMac.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FabloMac/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Fablo;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.limboy.fablo;
+				PRODUCT_NAME = Fablo;
+				SDKROOT = macosx;
 			};
 			name = Debug;
 		};
@@ -376,6 +483,28 @@
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
+		};
+		5AAB4B2013C88901FC7C3635 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = FabloMac/FabloMac.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FabloMac/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Fablo;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.limboy.fablo;
+				PRODUCT_NAME = Fablo;
+				SDKROOT = macosx;
+			};
+			name = Release;
 		};
 		869D30DBFFA2EAC3D17110BD /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -415,6 +544,15 @@
 			buildConfigurations = (
 				555293F78CFBFB4134F8D64F /* Debug */,
 				869D30DBFFA2EAC3D17110BD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A18758DD4A6A8D339B103CB4 /* Build configuration list for PBXNativeTarget "FabloMac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3E9459A175C976A3A54C6A9D /* Debug */,
+				5AAB4B2013C88901FC7C3635 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

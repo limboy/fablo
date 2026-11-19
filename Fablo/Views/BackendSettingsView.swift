@@ -10,6 +10,9 @@ struct BackendSettingsView: View {
     @State private var errorMessage: String?
 
     var body: some View {
+        #if os(macOS)
+        macBody
+        #else
         NavigationStack {
             Form {
                 Section {
@@ -23,7 +26,7 @@ struct BackendSettingsView: View {
                 } header: {
                     Text("后端服务")
                 } footer: {
-                    Text("短文、封面、音频和解析由服务端生成并保存。连接后即可查看书库。")
+                    Text(Self.footnote)
                 }
                 if let errorMessage {
                     Section { Text(errorMessage).foregroundStyle(.red) }
@@ -37,7 +40,7 @@ struct BackendSettingsView: View {
                             if isConnecting { Spacer(); ProgressView() }
                         }
                     }
-                    .disabled(isConnecting || address.isEmpty || token.isEmpty)
+                    .disabled(!canConnect)
                 }
             }
             .disabled(isConnecting)
@@ -46,15 +49,72 @@ struct BackendSettingsView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
             }
-            .task {
-                if let connection = studio.client?.connection {
-                    address = connection.baseURL.absoluteString
-                    token = connection.token
-                }
-            }
+            .task { loadSavedConnection() }
             .interactiveDismissDisabled(isConnecting)
         }
+        #endif
     }
+
+    private static let footnote = "短文、封面、音频和解析由服务端生成并保存。连接后即可查看书库。"
+    private var canConnect: Bool { !isConnecting && !address.isEmpty && !token.isEmpty }
+
+    private func loadSavedConnection() {
+        if let connection = studio.client?.connection {
+            address = connection.baseURL.absoluteString
+            token = connection.token
+        }
+    }
+
+    #if os(macOS)
+    /// A compact Mac sheet: title, fields and buttons share one leading edge, and the sheet hugs its content.
+    private var macBody: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("连接服务").font(.title2.bold())
+
+            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 10) {
+                GridRow {
+                    Text("地址").gridColumnAlignment(.trailing)
+                    TextField("地址", text: $address, prompt: Text(verbatim: "https://fablo.example.com"))
+                }
+                GridRow {
+                    Text("访问令牌")
+                    SecureField("访问令牌", text: $token, prompt: Text(verbatim: ""))
+                }
+            }
+            .textFieldStyle(.roundedBorder)
+            .labelsHidden()
+            .autocorrectionDisabled()
+            .disabled(isConnecting)
+
+            Text(Self.footnote).font(.callout).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let errorMessage {
+                Text(errorMessage).font(.callout).foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            HStack {
+                if isConnecting {
+                    ProgressView().controlSize(.small)
+                    Text("正在连接…").foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("取消") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Button("连接并保存") { Task { await connect() } }
+                    .keyboardShortcut(.defaultAction)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!canConnect)
+            }
+            .padding(.top, 4)
+        }
+        .padding(24)
+        .frame(width: 460)
+        .task { loadSavedConnection() }
+        .interactiveDismissDisabled(isConnecting)
+    }
+    #endif
 
     private func connect() async {
         isConnecting = true

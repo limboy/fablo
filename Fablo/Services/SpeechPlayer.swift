@@ -2,7 +2,6 @@ import AVFoundation
 import Foundation
 import MediaPlayer
 import Observation
-import UIKit
 
 /// Plays a story's narration and reports which sentence and word are being spoken.
 /// Keeps playing in the background and shows up on the lock screen / Control Center.
@@ -40,10 +39,12 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
     override init() {
         super.init()
         configureRemoteCommands()
+        #if os(iOS)
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleInterruption),
             name: AVAudioSession.interruptionNotification, object: nil
         )
+        #endif
     }
 
     /// Plays from `sentence`; reads to the end when `continuous`, otherwise repeats just that sentence,
@@ -93,7 +94,9 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
 
     func resume() {
         guard let player else { return }
+        #if os(iOS)
         try? AVAudioSession.sharedInstance().setActive(true)
+        #endif
         player.rate = Float(rate)
         player.play()
         isPaused = false
@@ -114,8 +117,10 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
     }
 
     private func start(url: URL, timeline: StoryAudioTimeline, sentence: Int, continuous: Bool) throws {
+        #if os(iOS)
         try AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio)
         try AVAudioSession.sharedInstance().setActive(true)
+        #endif
 
         let player = try AVAudioPlayer(contentsOf: url)
         player.delegate = self
@@ -215,7 +220,7 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
             MPMediaItemPropertyArtist: "Fablo",
             MPMediaItemPropertyPlaybackDuration: player?.duration ?? 0,
         ]
-        if let cover, let image = UIImage(data: cover) {
+        if let cover, let image = PlatformImage(data: cover) {
             info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
         }
         nowPlaying = info
@@ -248,6 +253,7 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
         }
     }
 
+    #if os(iOS)
     /// A call or another app's audio pauses us; reflect that instead of looking stuck.
     @objc nonisolated private func handleInterruption(_ notification: Notification) {
         guard let raw = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
@@ -257,6 +263,7 @@ final class SpeechPlayer: NSObject, AVAudioPlayerDelegate {
             if self.player != nil, !self.isPaused { self.pause() }
         }
     }
+    #endif
 
     // MARK: AVAudioPlayerDelegate
 

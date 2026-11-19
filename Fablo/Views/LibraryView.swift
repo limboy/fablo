@@ -4,6 +4,9 @@ struct LibraryView: View {
     @Environment(StoryStudio.self) private var studio
     @Environment(\.scenePhase) private var scenePhase
     @Environment(SpeechPlayer.self) private var player
+    #if os(macOS)
+    @Environment(\.openSettings) private var openSettings
+    #endif
 
     @State private var filter: StoryLanguage = .en
     @State private var board: ReadingStatus = .unread
@@ -21,11 +24,7 @@ struct LibraryView: View {
             ScrollView {
                 LazyVStack(spacing: 18) {
                     if let error = studio.errorMessage {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(error).font(.callout).foregroundStyle(studio.isShowingCachedLibrary ? Theme.muted : .red)
-                            Button("重试") { Task { await studio.refresh() } }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        errorBanner(error)
                     }
 
                     ForEach(entries) { entry in
@@ -53,10 +52,15 @@ struct LibraryView: View {
             .navigationDestination(for: Story.self) { story in
                 ReaderView(story: story)
             }
+            #if os(macOS)
+            .toolbar(removing: .title)
+            #endif
             .toolbar {
+                #if os(iOS)
                 ToolbarItem(placement: .topBarLeading) {
                     Button("连接服务", systemImage: "gearshape") { showingBackendSettings = true }
                 }
+                #endif
                 ToolbarItem(placement: .principal) {
                     Picker("语言", selection: $filter) {
                         ForEach(StoryLanguage.allCases) { language in
@@ -64,16 +68,26 @@ struct LibraryView: View {
                         }
                     }
                     .pickerStyle(.segmented)
+                    #if os(iOS)
                     .frame(width: 160)
+                    #else
+                    .fixedSize()
+                    #endif
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("新短文", systemImage: "plus") { showingNewStory = true }
+                        #if os(iOS)
                         .buttonStyle(.glassProminent)
+                        #else
+                        .keyboardShortcut("n")
+                        .help("新短文")
+                        #endif
                         .disabled(!studio.isConfigured)
                 }
             }
             .sheet(isPresented: $showingNewStory) {
                 NewStoryView()
+                    .macSheetFrame()
                     .presentationBackground(Theme.paper)
             }
             .sheet(isPresented: $showingBackendSettings) { BackendSettingsView() }
@@ -102,19 +116,29 @@ struct LibraryView: View {
                 } label: {
                     VStack(spacing: 5) {
                         Image(systemName: status.systemImage).font(.system(size: 19, weight: .semibold))
+                        #if os(iOS)
                         HStack(spacing: 4) {
                             Text(status.title)
                             Text(count, format: .number).monospacedDigit()
                         }
                         .font(.caption.weight(.semibold))
+                        #endif
                     }
                     .foregroundStyle(board == status ? .white : Theme.muted)
+                    #if os(macOS)
+                    // Icon-only on the Mac; the name and count show on hover.
+                    .frame(width: 64, height: 40)
+                    #else
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: 58)
+                    #endif
                     .background(board == status ? Theme.accent : .clear, in: Capsule())
                     .contentShape(.capsule)
                 }
                 .buttonStyle(.plain)
+                #if os(macOS)
+                .help("\(status.title) \(count)")
+                #endif
                 .accessibilityLabel("\(status.title)，\(count)篇短文")
                 .accessibilityAddTraits(board == status ? .isSelected : [])
             }
@@ -128,6 +152,38 @@ struct LibraryView: View {
         .padding(.top, 8)
     }
 
+    /// Sync problems sit in a quiet card above the library; offline (cached) states are less alarming than failures.
+    private func errorBanner(_ message: String) -> some View {
+        let isOffline = studio.isShowingCachedLibrary
+        return HStack(alignment: .center, spacing: 12) {
+            Image(systemName: isOffline ? "icloud.slash" : "exclamationmark.triangle.fill")
+                .font(.title3)
+                .foregroundStyle(isOffline ? Theme.muted : .red)
+            Text(message)
+                .font(.callout)
+                .foregroundStyle(Theme.ink)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+            Button("重试") { Task { await studio.refresh() } }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+                .controlSize(.small)
+                .disabled(studio.isRefreshing)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.top, 8)
+    }
+
+    private func showBackendSettings() {
+        #if os(macOS)
+        openSettings()
+        #else
+        showingBackendSettings = true
+        #endif
+    }
+
     private var emptyState: some View {
         VStack(spacing: 14) {
             Image(systemName: "books.vertical.fill").font(.system(size: 50)).foregroundStyle(Theme.accent)
@@ -136,7 +192,7 @@ struct LibraryView: View {
                 .multilineTextAlignment(.center)
                 .foregroundStyle(Theme.muted)
             Button(studio.isConfigured ? "创作第一篇" : "连接服务", systemImage: studio.isConfigured ? "sparkles" : "network") {
-                if studio.isConfigured { showingNewStory = true } else { showingBackendSettings = true }
+                if studio.isConfigured { showingNewStory = true } else { showBackendSettings() }
             }
                 .buttonStyle(.glassProminent)
                 .padding(.top, 6)

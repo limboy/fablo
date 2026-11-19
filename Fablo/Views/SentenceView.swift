@@ -322,6 +322,8 @@ struct SentenceView: View {
         .sheet(item: $tappedWord) { box in
             WordDetailView(word: box.word, language: language)
                 .presentationDetents([.height(220)])
+                .macSheetFrame(width: 380, height: 220)
+                .macDismissButton()
         }
         .animation(.snappy(duration: 0.25), value: isSelected)
     }

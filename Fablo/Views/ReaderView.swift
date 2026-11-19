@@ -18,6 +18,7 @@ struct ReaderView: View {
     @State private var selectedID: Int?
     @State private var analysisTarget: SentenceRef?
     @State private var scrollPosition = ScrollPosition(idType: Int.self)
+    @State private var readingStatusError: String?
 
     private var options: ReadingOptions {
         ReadingOptions(showFurigana: showFurigana, showRomaji: showRomaji)
@@ -62,14 +63,26 @@ struct ReaderView: View {
         }
         .background(Theme.paper.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
+        #if os(macOS)
+        .toolbar(removing: .title)
+        #endif
         .toolbar {
+            #if os(macOS)
+            // Mac places primary actions next to the back button; a flexible spacer in the same
+            // (automatic) section pushes the menus to the trailing edge instead.
+            ToolbarSpacer(.flexible, placement: .automatic)
+            ToolbarItem(placement: .automatic) { settingsMenu }
+            #else
             ToolbarItem(placement: .topBarTrailing) { ReadingStatusMenu(story: story) }
             ToolbarItem(placement: .topBarTrailing) { settingsMenu }
+            #endif
         }
         .safeAreaInset(edge: .bottom) { playbackBar }
         .sheet(item: $analysisTarget) { ref in
             if let content {
                 AnalysisView(story: story, content: content, ref: ref)
+                    .macSheetFrame(width: 460, height: 700)
+                    .macDismissButton()
             }
         }
         .task { await load() }
@@ -201,13 +214,31 @@ struct ReaderView: View {
 
     private var settingsMenu: some View {
         Menu {
+            #if os(macOS)
+            // The Mac keeps the toolbar to one button; reading status lives in this menu.
+            Menu("阅读状态", systemImage: story.readingStatus.systemImage) {
+                ReadingStatusPicker(story: story) { readingStatusError = $0 }
+            }
+            .disabled(story.isUpdatingReadingStatus)
+            Divider()
+            #endif
             if story.language == .ja {
                 Toggle("显示假名", systemImage: "textformat.size.smaller", isOn: $showFurigana)
                 Toggle("显示罗马音", systemImage: "character.textbox", isOn: $showRomaji)
             }
             Toggle("显示全部翻译", systemImage: "translate", isOn: $showAllTranslations)
         } label: {
+            #if os(macOS)
+            Image(systemName: "ellipsis")
+            #else
             Image(systemName: "textformat")
+            #endif
+        }
+        .menuIndicator(.hidden)
+        .alert("无法更新阅读状态", isPresented: Binding(get: { readingStatusError != nil }, set: { if !$0 { readingStatusError = nil } })) {
+            Button("好", role: .cancel) { }
+        } message: {
+            Text(readingStatusError ?? "请稍后重试。")
         }
     }
 
@@ -277,6 +308,9 @@ struct ReaderView: View {
                     Text(Self.rateLabel(rate)).tag(rate)
                 }
             }
+            // List the options in the menu itself; the Mac would otherwise nest them in a submenu.
+            .pickerStyle(.inline)
+            .labelsHidden()
         } label: {
             Text(Self.rateLabel(speechRate))
                 .font(.subheadline.weight(.semibold).monospacedDigit())
@@ -285,6 +319,13 @@ struct ReaderView: View {
                 .frame(minWidth: 56, minHeight: Self.barControlHeight)
                 .background(Theme.card, in: Capsule())
         }
+        #if os(macOS)
+        // Draw only the capsule label, without the Mac's bordered menu button and arrow.
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        #endif
         .accessibilityLabel("语速 \(Self.rateLabel(speechRate))")
         .onChange(of: speechRate) { _, rate in player.setRate(rate) }
     }
@@ -324,9 +365,9 @@ struct CoverView: View {
 
     var body: some View {
         ZStack {
-            if let data = story.coverData, let image = UIImage(data: data) {
+            if let data = story.coverData, let image = PlatformImage(data: data) {
                 Color.clear.overlay {
-                    Image(uiImage: image).resizable().scaledToFill()
+                    Image(platformImage: image).resizable().scaledToFill()
                 }
                 .clipped()
             } else {

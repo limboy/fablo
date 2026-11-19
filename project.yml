@@ -3,6 +3,7 @@ options:
   bundleIdPrefix: com.limboy
   deploymentTarget:
     iOS: "26.0"
+    macOS: "26.0"
 settings:
   base:
     SWIFT_VERSION: "5.0"
@@ -30,4 +31,30 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_STYLE: Automatic
+  FabloMac:
+    type: application
+    platform: macOS
+    sources:
+      - path: Fablo
+        excludes: [Services/Secrets.swift, Info.plist]
+    info:
+      path: FabloMac/Info.plist
+      properties:
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    entitlements:
+      path: FabloMac/FabloMac.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+    settings:
+      base:
+        PRODUCT_NAME: Fablo
+        PRODUCT_BUNDLE_IDENTIFIER: com.limboy.fablo
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Fablo
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.education
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_HARDENED_RUNTIME: YES
         CODE_SIGN_STYLE: Automatic

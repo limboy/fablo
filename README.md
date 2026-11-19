@@ -19,7 +19,7 @@ All explanations are in Simplified Chinese.
 
 ## How it works
 
-The iOS app connects to a Bun backend deployed on your VPS, running the API and generation queue in one PM2 service named `fablo`. The backend calls [Vercel AI Gateway](https://vercel.com/ai-gateway):
+The iOS and Mac apps connect to a Bun backend deployed on your VPS, running the API and generation queue in one PM2 service named `fablo`. The backend calls [Vercel AI Gateway](https://vercel.com/ai-gateway):
 
 | Task | Model |
 | --- | --- |
@@ -33,22 +33,23 @@ Stories, analyses and generation jobs are stored on the server in SQLite; covers
 ## Project layout
 
 ```
-Fablo/
-  App/        App entry point
+Fablo/             Shared SwiftUI sources for the iOS (Fablo) and Mac (FabloMac) targets
+  App/        App entry point and iOS/macOS platform shims
   Models/     Observable server records and generated content types
   Services/   Backend API client, disk cache, connection credentials, audio downloads and playback
   Views/      Library, new story, reader, sentence analysis
 backend/      Bun API, worker, SQLite storage and PM2 configuration
 marketing-video/   Remotion promo video
+FabloMac/          Mac target's generated Info.plist and sandbox entitlements
 project.yml        XcodeGen spec
 ```
 
 ## Getting started
 
-Requirements: Xcode with the iOS 26 SDK, and the [Bun backend](backend/README.md) running behind HTTPS.
+Requirements: Xcode with the iOS 26 / macOS 26 SDKs, and the [Bun backend](backend/README.md) running behind HTTPS.
 
 1. Deploy the backend using the [PM2 deployment instructions](backend/README.md). The Gateway key stays in the server's `.env` file.
-2. Open the project and run on an iPhone or simulator:
+2. Open the project and run the `Fablo` scheme on an iPhone or simulator, or the `FabloMac` scheme on your Mac:
 
    ```bash
    open Fablo.xcodeproj
