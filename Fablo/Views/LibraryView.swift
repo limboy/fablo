@@ -78,6 +78,7 @@ struct LibraryView: View {
                     Button("新短文", systemImage: "plus") { showingNewStory = true }
                         #if os(iOS)
                         .buttonStyle(.glassProminent)
+                        .foregroundStyle(Theme.onAccent)
                         #else
                         .keyboardShortcut("n")
                         .help("新短文")
@@ -124,7 +125,7 @@ struct LibraryView: View {
                         .font(.caption.weight(.semibold))
                         #endif
                     }
-                    .foregroundStyle(board == status ? .white : Theme.muted)
+                    .foregroundStyle(board == status ? Theme.onAccent : Theme.muted)
                     #if os(macOS)
                     // Icon-only on the Mac; the name and count show on hover.
                     .frame(width: 64, height: 40)
@@ -195,6 +196,7 @@ struct LibraryView: View {
                 if studio.isConfigured { showingNewStory = true } else { showBackendSettings() }
             }
                 .buttonStyle(.glassProminent)
+                .foregroundStyle(Theme.onAccent)
                 .padding(.top, 6)
         }
         .padding(.top, 80)
@@ -297,8 +299,8 @@ private struct LibraryEntryCard: View {
             }
         }
         .background(Theme.raised)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .shadow(color: .black.opacity(0.06), radius: 10, y: 4)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Theme.border))
         .contextMenu {
             if let story = entry.story {
                 Button("重新生成封面", systemImage: "photo") { studio.generateCover(for: story) }

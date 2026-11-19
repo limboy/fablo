@@ -298,6 +298,7 @@ struct SentenceView: View {
                         Label("解析", systemImage: "text.magnifyingglass")
                     }
                     .buttonStyle(.borderedProminent)
+                    .foregroundStyle(Theme.onAccent)
                     Spacer()
                 }
                 .font(.subheadline.weight(.semibold))

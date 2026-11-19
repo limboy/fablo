@@ -1,12 +1,16 @@
 import SwiftUI
 
 enum Theme {
-    static let paper = Color(light: 0xF9F9F0, dark: 0x1C1C19)
-    static let card = Color(light: 0xF0F0E3, dark: 0x2A2A25)
-    static let raised = Color(light: 0xFFFFFC, dark: 0x262622)
-    static let ink = Color(light: 0x1D1D1B, dark: 0xF2F2EA)
-    static let muted = Color(light: 0x5F5F58, dark: 0xA9A99E)
-    static let accent = Color(light: 0xD9774B, dark: 0xF09A6E)
+    // Monochrome, neutral greys: the accent is ink itself (black on light, white on dark).
+    static let paper = Color(light: 0xFAFAFA, dark: 0x0A0A0A)
+    static let card = Color(light: 0xF4F4F5, dark: 0x1C1C1E)
+    static let raised = Color(light: 0xFFFFFF, dark: 0x141414)
+    static let border = Color(light: 0xE4E4E7, dark: 0x27272A)
+    static let ink = Color(light: 0x0A0A0A, dark: 0xFAFAFA)
+    static let muted = Color(light: 0x71717A, dark: 0xA1A1AA)
+    static let accent = Color(light: 0x171717, dark: 0xFAFAFA)
+    /// Text and icons drawn on top of `accent`.
+    static let onAccent = Color(light: 0xFFFFFF, dark: 0x0A0A0A)
 
     static func chunk(_ role: ChunkRole) -> Color? {
         switch role {

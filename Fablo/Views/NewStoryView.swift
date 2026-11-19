@@ -114,6 +114,7 @@ struct NewStoryView: View {
                         .padding(.vertical, 6)
                 }
                 .buttonStyle(.glassProminent)
+                .foregroundStyle(Theme.onAccent)
                 .controlSize(.large)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 8)
@@ -159,7 +160,7 @@ struct NewStoryView: View {
                 Text(title)
             }
             .font(.subheadline.weight(selected ? .semibold : .regular))
-            .foregroundStyle(selected ? Color.white : Theme.ink)
+            .foregroundStyle(selected ? Theme.onAccent : Theme.ink)
             .padding(.horizontal, 12)
             .padding(.vertical, 9)
             .frame(maxWidth: fill ? .infinity : nil)

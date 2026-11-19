@@ -105,6 +105,7 @@ struct BackendSettingsView: View {
                 Button("连接并保存") { Task { await connect() } }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
+                    .foregroundStyle(Theme.onAccent)
                     .disabled(!canConnect)
             }
             .padding(.top, 4)

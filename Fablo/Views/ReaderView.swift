@@ -251,7 +251,7 @@ struct ReaderView: View {
             Button(action: togglePlayAll) {
                 Image(systemName: isPlayingThisStory && player.isPlayingAll && !player.isPaused ? "pause.fill" : "play.fill")
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.onAccent)
                     .frame(width: Self.barControlHeight, height: Self.barControlHeight)
                     .background(Theme.accent, in: Circle())
             }
